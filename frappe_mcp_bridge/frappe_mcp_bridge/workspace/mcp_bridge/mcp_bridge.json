@@ -1,0 +1,99 @@
+{
+ "app": "frappe_mcp_bridge",
+ "charts": [],
+ "content": "[{\"id\": \"mcp_hdr_1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Claude MCP Bridge</b></span>\", \"col\": 12}}, {\"id\": \"mcp_para_1\", \"type\": \"paragraph\", \"data\": {\"text\": \"Lets Claude Code and Codex read and change data on this site through the MCP server. Off until you switch it on.\", \"col\": 12}}, {\"id\": \"mcp_sc_settings\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"MCP Settings\", \"col\": 4}}, {\"id\": \"mcp_sc_log\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"MCP Request Log\", \"col\": 4}}, {\"id\": \"mcp_sc_errors\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Error Log\", \"col\": 4}}, {\"id\": \"mcp_sp_1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"mcp_hdr_2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Audit</b></span>\", \"col\": 12}}, {\"id\": \"mcp_card_audit\", \"type\": \"card\", \"data\": {\"card_name\": \"Audit\", \"col\": 4}}]",
+ "creation": "2026-09-23 00:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "integration",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "MCP Bridge",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Audit",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "MCP Bridge Settings",
+   "link_count": 0,
+   "link_to": "MCP Bridge Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "MCP Bridge Log",
+   "link_count": 0,
+   "link_to": "MCP Bridge Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Error Log",
+   "link_count": 0,
+   "link_to": "Error Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-23 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Frappe MCP Bridge",
+ "name": "MCP Bridge",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sequence_id": 21.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "MCP Settings",
+   "link_to": "MCP Bridge Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "MCP Request Log",
+   "link_to": "MCP Bridge Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Error Log",
+   "link_to": "Error Log",
+   "type": "DocType"
+  }
+ ],
+ "title": "MCP Bridge",
+ "type": "Workspace"
+}

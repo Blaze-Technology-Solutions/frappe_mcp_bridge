@@ -1,0 +1,311 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-23 00:00:00.000000",
+ "description": "Master switch and guard rails for the MCP server that lets Claude Code and Codex read and change data on this site.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "read_only_mode",
+  "column_break_switch",
+  "status_html",
+  "connection_section",
+  "mcp_user",
+  "column_break_connection",
+  "connection_html",
+  "capabilities_section",
+  "allow_read",
+  "allow_write",
+  "allow_submit_cancel",
+  "allow_delete",
+  "column_break_capabilities",
+  "allow_data_import",
+  "allow_run_patches",
+  "allow_sql_query",
+  "allow_admin_actions",
+  "allow_server_script",
+  "scope_section",
+  "restrict_doctypes",
+  "allowed_doctypes",
+  "blocked_doctypes",
+  "column_break_scope",
+  "allowed_roles",
+  "allowed_ips",
+  "safety_section",
+  "default_dry_run",
+  "max_rows",
+  "column_break_safety",
+  "max_write_batch",
+  "max_requests_per_hour",
+  "logging_section",
+  "log_requests",
+  "log_request_payload",
+  "column_break_logging",
+  "log_response_payload",
+  "log_retention_days"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "description": "Nothing reaches the site through MCP while this is off.",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable MCP Access"
+  },
+  {
+   "default": "1",
+   "depends_on": "enabled",
+   "description": "Blocks every tool that writes, no matter what is ticked below. Turn off only while you intend Claude to change data.",
+   "fieldname": "read_only_mode",
+   "fieldtype": "Check",
+   "label": "Read Only Mode"
+  },
+  {
+   "fieldname": "column_break_switch",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status_html",
+   "fieldtype": "HTML",
+   "label": "Status"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "connection_section",
+   "fieldtype": "Section Break",
+   "label": "Connection"
+  },
+  {
+   "description": "The user Claude Code or Codex acts as. Its own Frappe roles still bound what MCP can reach, so a purpose-made user with only the roles it needs is safer than Administrator. Use Generate API Keys above to issue its credentials.",
+   "fieldname": "mcp_user",
+   "fieldtype": "Link",
+   "label": "MCP User",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_connection",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connection_html",
+   "fieldtype": "HTML",
+   "label": "How To Connect"
+  },
+  {
+   "depends_on": "enabled",
+   "fieldname": "capabilities_section",
+   "fieldtype": "Section Break",
+   "label": "Capabilities"
+  },
+  {
+   "default": "1",
+   "description": "Read documents, schemas and reports.",
+   "fieldname": "allow_read",
+   "fieldtype": "Check",
+   "label": "Allow Read"
+  },
+  {
+   "default": "0",
+   "description": "Create and update documents.",
+   "fieldname": "allow_write",
+   "fieldtype": "Check",
+   "label": "Allow Write"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_submit_cancel",
+   "fieldtype": "Check",
+   "label": "Allow Submit / Cancel / Amend"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_delete",
+   "fieldtype": "Check",
+   "label": "Allow Delete"
+  },
+  {
+   "fieldname": "column_break_capabilities",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Bulk insert and update rows supplied as JSON or CSV.",
+   "fieldname": "allow_data_import",
+   "fieldtype": "Check",
+   "label": "Allow Data Import"
+  },
+  {
+   "default": "0",
+   "description": "Run app patch modules listed in patches.txt.",
+   "fieldname": "allow_run_patches",
+   "fieldtype": "Check",
+   "label": "Allow Running Patches"
+  },
+  {
+   "default": "0",
+   "description": "Read-only SELECT statements only; writes are rejected by the SQL guard.",
+   "fieldname": "allow_sql_query",
+   "fieldtype": "Check",
+   "label": "Allow SQL Query"
+  },
+  {
+   "default": "0",
+   "description": "Clear cache, reload doctypes, rebuild a document's links, enqueue scheduled jobs.",
+   "fieldname": "allow_admin_actions",
+   "fieldtype": "Check",
+   "label": "Allow Admin Actions"
+  },
+  {
+   "default": "0",
+   "description": "Runs a Server Script sandbox snippet. The widest door in this list — leave it off unless you are actively repairing data.",
+   "fieldname": "allow_server_script",
+   "fieldtype": "Check",
+   "label": "Allow Server Script"
+  },
+  {
+   "depends_on": "enabled",
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "Scope"
+  },
+  {
+   "default": "0",
+   "description": "When ticked, only the doctypes listed below can be touched.",
+   "fieldname": "restrict_doctypes",
+   "fieldtype": "Check",
+   "label": "Restrict To Listed Doctypes"
+  },
+  {
+   "depends_on": "restrict_doctypes",
+   "fieldname": "allowed_doctypes",
+   "fieldtype": "Table MultiSelect",
+   "label": "Allowed Doctypes",
+   "options": "MCP Bridge DocType"
+  },
+  {
+   "description": "Always refused, even when listed as allowed.",
+   "fieldname": "blocked_doctypes",
+   "fieldtype": "Table MultiSelect",
+   "label": "Blocked Doctypes",
+   "options": "MCP Bridge DocType"
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The API key's user must hold one of these roles. Empty means System Manager only.",
+   "fieldname": "allowed_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Allowed Roles",
+   "options": "MCP Bridge Role"
+  },
+  {
+   "description": "One IP or CIDR range per line. Empty means any address.",
+   "fieldname": "allowed_ips",
+   "fieldtype": "Small Text",
+   "label": "Allowed IP Addresses"
+  },
+  {
+   "depends_on": "enabled",
+   "fieldname": "safety_section",
+   "fieldtype": "Section Break",
+   "label": "Safety Limits"
+  },
+  {
+   "default": "0",
+   "description": "Every write runs as a dry run unless the caller explicitly passes dry_run=false.",
+   "fieldname": "default_dry_run",
+   "fieldtype": "Check",
+   "label": "Default To Dry Run"
+  },
+  {
+   "default": "500",
+   "description": "Ceiling on rows returned by a single read.",
+   "fieldname": "max_rows",
+   "fieldtype": "Int",
+   "label": "Max Rows Per Read"
+  },
+  {
+   "fieldname": "column_break_safety",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "100",
+   "description": "Ceiling on documents changed by a single bulk update or import.",
+   "fieldname": "max_write_batch",
+   "fieldtype": "Int",
+   "label": "Max Documents Per Write Batch"
+  },
+  {
+   "default": "0",
+   "description": "0 means no limit.",
+   "fieldname": "max_requests_per_hour",
+   "fieldtype": "Int",
+   "label": "Max Requests Per Hour"
+  },
+  {
+   "fieldname": "logging_section",
+   "fieldtype": "Section Break",
+   "label": "Logging"
+  },
+  {
+   "default": "1",
+   "description": "Writes a MCP Bridge Log row for every call, including the ones that were refused.",
+   "fieldname": "log_requests",
+   "fieldtype": "Check",
+   "label": "Log Requests"
+  },
+  {
+   "default": "1",
+   "depends_on": "log_requests",
+   "fieldname": "log_request_payload",
+   "fieldtype": "Check",
+   "label": "Store Request Payload"
+  },
+  {
+   "fieldname": "column_break_logging",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "depends_on": "log_requests",
+   "fieldname": "log_response_payload",
+   "fieldtype": "Check",
+   "label": "Store Response Payload"
+  },
+  {
+   "default": "30",
+   "depends_on": "log_requests",
+   "description": "Logs older than this are cleared by the daily scheduler. 0 keeps them forever.",
+   "fieldname": "log_retention_days",
+   "fieldtype": "Int",
+   "label": "Log Retention (Days)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe MCP Bridge",
+ "name": "MCP Bridge Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -4,11 +4,11 @@ authors = [
     { name = "Blaze Technology Solutions", email = "niyasibnurazak@gmail.com"}
 ]
 description = "MCP server bridge that lets Claude Code and Codex work with a Frappe site"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    # "frappe~=16.0.0" # Installed and managed by bench.
+    # "frappe>=15,<17" # Installed and managed by bench.
 ]
 
 [build-system]
@@ -19,13 +19,16 @@ build-backend = "flit_core.buildapi"
 [tool.bench.dev-dependencies]
 # package_name = "~=1.1.0"
 
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<17.0.0"
+
 # These apt dependencies will be installed from Ubuntu repositories when you host your app on Frappe Cloud
 [deploy.dependencies.apt]
 packages = []
 
 [tool.ruff]
 line-length = 110
-target-version = "py314"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [

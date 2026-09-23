@@ -86,7 +86,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "frappe_mcp_bridge.install.before_install"
-# after_install = "frappe_mcp_bridge.install.after_install"
+after_install = "frappe_mcp_bridge.install.after_install"
 
 # Uninstallation
 # ------------
@@ -155,23 +155,11 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"frappe_mcp_bridge.tasks.all"
-# 	],
-# 	"daily": [
-# 		"frappe_mcp_bridge.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"frappe_mcp_bridge.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"frappe_mcp_bridge.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"frappe_mcp_bridge.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_log.mcp_bridge_log.clear_old_logs",
+	],
+}
 
 # Testing
 # -------
@@ -253,12 +241,12 @@ app_license = "mit"
 # Automatically update python controller files with type annotations for this app.
 # export_python_type_annotations = True
 
-# default_log_clearing_doctypes = {
-# 	"Logging DocType Name": 30  # days to retain logs
-# }
+# MCP Bridge Log also has its own retention setting; this is the floor bench enforces.
+default_log_clearing_doctypes = {
+	"MCP Bridge Log": 90,
+}
 
 # Translation
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

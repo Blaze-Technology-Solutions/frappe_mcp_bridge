@@ -53,3 +53,7 @@ jspm_packages/
 
 # Aider AI Chat
 .aider*
+
+# stdio bridge local state
+mcp_server/.venv/
+mcp_server/.env
