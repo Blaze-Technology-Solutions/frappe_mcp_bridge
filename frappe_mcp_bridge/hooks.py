@@ -53,6 +53,10 @@ app_license = "mit"
 # include app icons in desk
 # app_include_icons = "frappe_mcp_bridge/public/icons.svg"
 
+# Serves /.well-known/oauth-* discovery on v15, which has none of its own. On v16 Frappe
+# answers those paths before any page renderer runs.
+page_renderer = ["frappe_mcp_bridge.oauth.WellKnownRenderer"]
+
 # Home Pages
 # ----------
 
@@ -156,6 +160,13 @@ after_install = "frappe_mcp_bridge.install.after_install"
 # ---------------
 
 scheduler_events = {
+	"cron": {
+		# Tidy up after Allow Writes For. The gate already refuses writes the moment the
+		# window ends; this ticks Read Only Mode back on so the form shows it too.
+		"*/5 * * * *": [
+			"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings.close_expired_write_window",
+		],
+	},
 	"daily": [
 		"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_log.mcp_bridge_log.clear_old_logs",
 	],
@@ -177,9 +188,12 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "frappe_mcp_bridge.event.get_events"
-# }
+# v16's registration endpoint refuses http://localhost redirects outside developer mode,
+# which is what Claude Code and Codex register. Ours accepts them while MCP OAuth is on,
+# and hands straight back to Frappe's while it is off.
+override_whitelisted_methods = {
+	"frappe.integrations.oauth2.register_client": "frappe_mcp_bridge.oauth.register_client",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

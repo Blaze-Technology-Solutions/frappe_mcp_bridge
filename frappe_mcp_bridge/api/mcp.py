@@ -21,7 +21,7 @@ from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_
 	CAPABILITY_FIELDS,
 	get_settings,
 )
-from frappe_mcp_bridge.mcp import gate, logger, registry
+from frappe_mcp_bridge.mcp import gate, logger, masking, registry
 
 DRY_RUN_SAVEPOINT = "mcp_bridge_dry_run"
 
@@ -37,8 +37,10 @@ def ping() -> dict:
 		"user": frappe.session.user,
 		"roles": sorted(frappe.get_roles()),
 		"enabled": bool(settings.enabled),
-		"read_only_mode": bool(settings.read_only_mode),
+		"read_only_mode": settings.read_only_active(),
+		"writes_allowed_until": None if settings.read_only_active() else settings.writes_allowed_until,
 		"default_dry_run": bool(settings.default_dry_run),
+		"signed_in_with": gate.sign_in_method(),
 		"server_time": frappe.utils.now(),
 	}
 
@@ -66,21 +68,28 @@ def list_tools() -> dict:
 	return {
 		"ok": True,
 		"enabled": bool(settings.enabled),
-		"read_only_mode": bool(settings.read_only_mode),
+		"read_only_mode": settings.read_only_active(),
 		"capabilities": {name: bool(settings.get(field)) for name, field in CAPABILITY_FIELDS.items()},
 		"tools": tools,
 	}
 
 
-@frappe.whitelist(methods=["GET", "POST", "DELETE"])
+@frappe.whitelist(allow_guest=True, methods=["GET", "POST", "DELETE"])
 def serve() -> Response:
 	"""The MCP endpoint itself, for clients that speak Streamable HTTP directly.
 
 	Point Claude Code or Codex at /api/method/frappe_mcp_bridge.api.mcp.serve with an
-	`Authorization: token <api_key>:<api_secret>` header. The body is read raw because
-	JSON-RPC's own `method` and `params` keys mean something else to Frappe's form_dict.
+	`Authorization: token <api_key>:<api_secret>` header, or let it sign in with OAuth.
+	The body is read raw because JSON-RPC's own `method` and `params` keys mean something
+	else to Frappe's form_dict.
 	"""
+	from frappe_mcp_bridge import oauth
 	from frappe_mcp_bridge.mcp import http
+
+	if frappe.session.user == "Guest":
+		# Guests are let in only to be told how to sign in: MCP clients start OAuth on a
+		# 401 carrying resource_metadata, never on Frappe's usual 403.
+		return oauth.unauthorized_response()
 
 	if frappe.request.method != "POST":
 		# Stateless server: no SSE stream to open with GET and no session to end with DELETE.
@@ -159,7 +168,7 @@ def execute(tool: str | None = None, params=None, client: str | None = None, dry
 		call_params["dry_run"] = is_dry_run
 
 	try:
-		result = _run(definition, call_params, is_dry_run)
+		result = masking.mask(get_settings(), definition, params, _run(definition, call_params, is_dry_run))
 	except Exception as exception:
 		frappe.db.rollback()
 		return _failure(

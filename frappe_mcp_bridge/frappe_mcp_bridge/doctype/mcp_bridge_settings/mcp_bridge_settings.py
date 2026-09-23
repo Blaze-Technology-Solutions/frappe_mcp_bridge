@@ -6,6 +6,7 @@ import ipaddress
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import add_to_date, format_datetime, get_datetime, now_datetime
 
 # Capability name -> the checkbox that unlocks it. Handlers declare a capability, the gate
 # looks it up here, so adding a tool never means touching the gate.
@@ -37,17 +38,26 @@ ALWAYS_BLOCKED_DOCTYPES = {
 	"User Permission",
 	"OAuth Bearer Token",
 	"OAuth Client",
+	"OAuth Authorization Code",
 	"Access Log",
 	"Webhook",
 	"Server Script",
 	"System Settings",
 }
 
+# The longest a single Allow Writes For window may run.
+MAX_WRITE_WINDOW_MINUTES = 24 * 60
+
 
 class MCPBridgeSettings(Document):
 	def validate(self):
 		self.validate_ips()
+		self.validate_masked_fields()
 		self.clamp_limits()
+
+		if self.read_only_mode:
+			# Switching back to read only ends any write window early.
+			self.writes_allowed_until = None
 
 	def validate_ips(self):
 		for entry in self.get_allowed_ips():
@@ -55,6 +65,17 @@ class MCPBridgeSettings(Document):
 				ipaddress.ip_network(entry, strict=False)
 			except ValueError:
 				frappe.throw(_("{0} is not a valid IP address or CIDR range").format(frappe.bold(entry)))
+
+	def validate_masked_fields(self):
+		for row in self.masked_fields or []:
+			row.fieldname = (row.fieldname or "").strip()
+
+			if row.document_type and not frappe.get_meta(row.document_type).has_field(row.fieldname):
+				frappe.throw(
+					_("Row {0}: {1} has no field named {2}.").format(
+						row.idx, row.document_type, frappe.bold(row.fieldname)
+					)
+				)
 
 	def clamp_limits(self):
 		# A zero or negative ceiling would read as "unlimited" to the handlers, which is the
@@ -66,6 +87,11 @@ class MCPBridgeSettings(Document):
 
 	def on_update(self):
 		frappe.clear_cache(doctype="MCP Bridge Settings")
+
+		if self.allow_oauth and self.has_value_changed("allow_oauth"):
+			from frappe_mcp_bridge import oauth
+
+			oauth.publish_discovery()
 
 	# Helpers used by frappe_mcp_bridge.mcp.gate ------------------------------------------------
 
@@ -79,6 +105,13 @@ class MCPBridgeSettings(Document):
 	def capability_field(self, capability: str) -> str | None:
 		return CAPABILITY_FIELDS.get(capability)
 
+	def write_window_expired(self) -> bool:
+		return bool(self.writes_allowed_until and now_datetime() >= get_datetime(self.writes_allowed_until))
+
+	def read_only_active(self) -> bool:
+		"""Read Only Mode, or a write window that has run out but not yet been tidied up."""
+		return bool(self.read_only_mode) or self.write_window_expired()
+
 	def is_capability_allowed(self, capability: str) -> tuple[bool, str]:
 		"""Return (allowed, reason). Reason is only meaningful when not allowed."""
 		if not self.enabled:
@@ -88,11 +121,27 @@ class MCPBridgeSettings(Document):
 		if not field:
 			return False, _("Unknown capability {0}.").format(capability)
 
-		if self.read_only_mode and capability in WRITE_CAPABILITIES:
-			return False, _("Read Only Mode is on, so {0} tools are refused.").format(capability)
+		if capability in WRITE_CAPABILITIES:
+			if self.read_only_mode:
+				return False, _("Read Only Mode is on, so {0} tools are refused.").format(capability)
+
+			if self.write_window_expired():
+				return False, _("The write window ended at {0}, so {1} tools are refused.").format(
+					format_datetime(self.writes_allowed_until), capability
+				)
 
 		if not self.get(field):
 			return False, _("{0} is not ticked in MCP Bridge Settings.").format(_(self.meta.get_label(field)))
+
+		return True, ""
+
+	def is_sign_in_allowed(self, method: str) -> tuple[bool, str]:
+		"""method is api_key, oauth or session, as worked out by the gate."""
+		if method == "api_key" and not self.allow_api_keys:
+			return False, _("API key sign-in is off in MCP Bridge Settings. Sign in with OAuth instead.")
+
+		if method == "oauth" and not self.allow_oauth:
+			return False, _("OAuth sign-in is off in MCP Bridge Settings.")
 
 		return True, ""
 
@@ -126,9 +175,59 @@ class MCPBridgeSettings(Document):
 
 		return any(address in ipaddress.ip_network(entry, strict=False) for entry in allowed)
 
+	def get_masked_fields(self) -> tuple[set[str], dict[str, set[str]]]:
+		"""(fieldnames masked on every doctype, {doctype: fieldnames masked on it})."""
+		everywhere, by_doctype = set(), {}
+
+		for row in self.masked_fields or []:
+			if not row.fieldname:
+				continue
+
+			if row.document_type:
+				by_doctype.setdefault(row.document_type, set()).add(row.fieldname)
+			else:
+				everywhere.add(row.fieldname)
+
+		return everywhere, by_doctype
+
 
 def get_settings() -> MCPBridgeSettings:
 	return frappe.get_cached_doc("MCP Bridge Settings")
+
+
+# Write window -------------------------------------------------------------------------
+
+
+@frappe.whitelist(methods=["POST"])
+def allow_writes_for(minutes: int) -> dict:
+	"""Turn Read Only Mode off for a fixed time. It switches itself back on afterwards."""
+	frappe.only_for("System Manager")
+
+	minutes = int(minutes or 0)
+	if not 1 <= minutes <= MAX_WRITE_WINDOW_MINUTES:
+		frappe.throw(_("Pick between 1 and {0} minutes.").format(MAX_WRITE_WINDOW_MINUTES))
+
+	settings = frappe.get_single("MCP Bridge Settings")
+	if not settings.enabled:
+		frappe.throw(_("Enable MCP Access first."))
+
+	settings.read_only_mode = 0
+	settings.writes_allowed_until = add_to_date(now_datetime(), minutes=minutes)
+	settings.save()
+
+	return {"writes_allowed_until": settings.writes_allowed_until}
+
+
+def close_expired_write_window():
+	"""Scheduler hook. The gate already refuses writes once the window ends; this makes the
+	form say so too, by ticking Read Only Mode back on."""
+	settings = frappe.get_single("MCP Bridge Settings")
+	if settings.read_only_mode or not settings.write_window_expired():
+		return
+
+	settings.read_only_mode = 1
+	settings.flags.ignore_permissions = True
+	settings.save()
 
 
 # Connection helpers for the settings form ---------------------------------------------
@@ -176,6 +275,7 @@ def _connection_info(api_key: str, api_secret: str) -> dict:
 		"site_url": url,
 		"endpoint": endpoint,
 		"server_name": name,
+		"is_https": url.startswith("https://"),
 		"claude_code": f'claude mcp add --transport http {name} {endpoint} --header "Authorization: {auth}"',
 		"codex": (
 			f"# ~/.codex/config.toml, then export FRAPPE_MCP_AUTH='{auth}'\n"
@@ -186,4 +286,14 @@ def _connection_info(api_key: str, api_secret: str) -> dict:
 		"stdio_env": (
 			f"FRAPPE_MCP_URL={url}\nFRAPPE_MCP_API_KEY={api_key}\nFRAPPE_MCP_API_SECRET={api_secret}"
 		),
+		"oauth_claude_code": (
+			f"claude mcp add --transport http {name} {endpoint}\n"
+			"# then run /mcp in Claude Code, pick the server and choose Authenticate"
+		),
+		"oauth_codex": (
+			f"# ~/.codex/config.toml\n[mcp_servers.{name}]\n"
+			f'url = "{endpoint}"\n'
+			f"# then run: codex mcp login {name}"
+		),
+		"oauth_claude_ai": f"Settings → Connectors → Add custom connector → {endpoint}",
 	}

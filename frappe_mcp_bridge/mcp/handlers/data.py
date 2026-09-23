@@ -14,6 +14,8 @@ import io
 import frappe
 from frappe import _
 
+from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
+from frappe_mcp_bridge.mcp import masking
 from frappe_mcp_bridge.mcp.gate import max_rows, max_write_batch, require_capability
 from frappe_mcp_bridge.mcp.registry import tool
 
@@ -161,6 +163,9 @@ def export_records(
 		order_by=order_by,
 		limit_page_length=limit,
 	)
+
+	# The CSV is text by the time execute sees it, so mask the rows before writing them.
+	rows = masking.mask_rows(get_settings(), doctype, rows)
 
 	buffer = io.StringIO()
 	writer = csv.DictWriter(buffer, fieldnames=fields, extrasaction="ignore")

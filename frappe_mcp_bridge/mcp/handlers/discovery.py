@@ -52,7 +52,8 @@ def describe_site() -> dict:
 		},
 		"mcp": {
 			"enabled": bool(settings.enabled),
-			"read_only_mode": bool(settings.read_only_mode),
+			"read_only_mode": settings.read_only_active(),
+			"writes_allowed_until": None if settings.read_only_active() else settings.writes_allowed_until,
 			"default_dry_run": bool(settings.default_dry_run),
 			"max_rows": settings.max_rows,
 			"max_write_batch": settings.max_write_batch,
@@ -62,6 +63,11 @@ def describe_site() -> dict:
 			"restrict_doctypes": bool(settings.restrict_doctypes),
 			"allowed_doctypes": [row.document_type for row in (settings.allowed_doctypes or [])],
 			"blocked_doctypes": [row.document_type for row in (settings.blocked_doctypes or [])],
+			# Names only, so Claude can explain a ••• rather than guess at it.
+			"masked_fields": [
+				f"{row.document_type}.{row.fieldname}" if row.document_type else row.fieldname
+				for row in (settings.masked_fields or [])
+			],
 		},
 	}
 

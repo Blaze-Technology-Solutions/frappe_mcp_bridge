@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
 from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
+from frappe_mcp_bridge.mcp import masking
 from frappe_mcp_bridge.mcp.registry import Tool
 
 
@@ -23,10 +24,35 @@ def check_request(tool: Tool, params: dict) -> None:
 	if not allowed:
 		raise MCPBlocked(reason)
 
+	check_sign_in(settings)
 	check_role(settings)
 	check_ip(settings)
 	check_rate_limit(settings)
 	check_doctype(settings, tool, params)
+
+	reason = masking.refusal(settings, tool, params)
+	if reason:
+		raise MCPBlocked(reason)
+
+
+def sign_in_method() -> str:
+	"""How this request authenticated: oauth, api_key, or session for a desk cookie."""
+	request = getattr(frappe.local, "request", None)
+	header = (request.headers.get("Authorization", "") if request else "").strip().lower()
+
+	if header.startswith("bearer "):
+		return "oauth"
+
+	if header.startswith(("token ", "basic ")):
+		return "api_key"
+
+	return "session"
+
+
+def check_sign_in(settings) -> None:
+	allowed, reason = settings.is_sign_in_allowed(sign_in_method())
+	if not allowed:
+		raise MCPBlocked(reason)
 
 
 def check_role(settings) -> None:

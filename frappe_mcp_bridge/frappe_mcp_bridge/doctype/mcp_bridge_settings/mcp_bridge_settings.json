@@ -9,12 +9,18 @@
  "field_order": [
   "enabled",
   "read_only_mode",
+  "writes_allowed_until",
   "column_break_switch",
   "status_html",
   "connection_section",
   "mcp_user",
   "column_break_connection",
   "connection_html",
+  "sign_in_section",
+  "allow_api_keys",
+  "allow_oauth",
+  "column_break_sign_in",
+  "oauth_html",
   "capabilities_section",
   "allow_read",
   "allow_write",
@@ -33,6 +39,8 @@
   "column_break_scope",
   "allowed_roles",
   "allowed_ips",
+  "masking_section",
+  "masked_fields",
   "safety_section",
   "default_dry_run",
   "max_rows",
@@ -61,6 +69,14 @@
    "fieldname": "read_only_mode",
    "fieldtype": "Check",
    "label": "Read Only Mode"
+  },
+  {
+   "depends_on": "eval:doc.enabled && doc.writes_allowed_until",
+   "description": "Set by Allow Writes For. Read Only Mode switches itself back on at this time.",
+   "fieldname": "writes_allowed_until",
+   "fieldtype": "Datetime",
+   "label": "Writes Allowed Until",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_switch",
@@ -92,6 +108,34 @@
    "fieldname": "connection_html",
    "fieldtype": "HTML",
    "label": "How To Connect"
+  },
+  {
+   "fieldname": "sign_in_section",
+   "fieldtype": "Section Break",
+   "label": "Sign-In"
+  },
+  {
+   "default": "1",
+   "description": "Clients that send <code>Authorization: token key:secret</code>, including the local stdio bridge.",
+   "fieldname": "allow_api_keys",
+   "fieldtype": "Check",
+   "label": "Allow API Key Sign-In"
+  },
+  {
+   "default": "0",
+   "description": "Each person signs in with their own Frappe account from Claude Code, Codex, Claude Desktop or claude.ai, and approves access on this site. Turning this on publishes the OAuth discovery documents and lets MCP clients register themselves.",
+   "fieldname": "allow_oauth",
+   "fieldtype": "Check",
+   "label": "Allow OAuth Sign-In"
+  },
+  {
+   "fieldname": "column_break_sign_in",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "oauth_html",
+   "fieldtype": "HTML",
+   "label": "OAuth"
   },
   {
    "depends_on": "enabled",
@@ -209,6 +253,20 @@
    "label": "Allowed IP Addresses"
   },
   {
+   "collapsible": 1,
+   "depends_on": "enabled",
+   "fieldname": "masking_section",
+   "fieldtype": "Section Break",
+   "label": "Sensitive Fields"
+  },
+  {
+   "description": "Values of these fields are replaced with ••• in everything MCP returns, and filtering, sorting or querying on them is refused, so they never reach the AI model. Password fields are never returned in any case.",
+   "fieldname": "masked_fields",
+   "fieldtype": "Table",
+   "label": "Masked Fields",
+   "options": "MCP Bridge Masked Field"
+  },
+  {
    "depends_on": "enabled",
    "fieldname": "safety_section",
    "fieldtype": "Section Break",
@@ -288,7 +346,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-23 00:00:00.000000",
+ "modified": "2026-09-24 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe MCP Bridge",
  "name": "MCP Bridge Settings",
