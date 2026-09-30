@@ -14,7 +14,16 @@ from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_
 MAX_PAYLOAD_CHARS = 40_000
 
 # Never store the values of these keys, however deeply nested in the payload.
-REDACTED_KEYS = {"password", "new_password", "api_key", "api_secret", "secret", "token", "pwd"}
+REDACTED_KEYS = {
+	"password",
+	"new_password",
+	"api_key",
+	"api_secret",
+	"secret",
+	"token",
+	"pwd",
+	"download_url",
+}
 
 
 def record(

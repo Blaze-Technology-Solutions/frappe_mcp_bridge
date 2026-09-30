@@ -175,4 +175,39 @@ frappe.get_doc are not. Assign to `result` to return a value:
 
 Prefer a purpose-built tool when one fits; reach for this for a repair that needs
 real logic. Dry-run it first, and show the user the script before committing.""",
+	"list_server_files": """\
+List files and folders in the bench directory: apps, sites, logs, config.
+
+path is relative to the bench, e.g. "apps/erpnext/erpnext/stock"; an absolute path
+inside the bench, as a traceback shows it, works too. Leave it out for the bench
+itself. pattern searches by file name below path instead: "hooks.py" or "*.json"
+matches the name at any depth, and a pattern with a slash, such as
+"*/doctype/*/*.py", matches the path below path. Entries holding credentials are
+marked blocked and cannot be read.""",
+	"read_server_file": """\
+Read a text file from the bench directory, with line numbers.
+
+path is relative to the bench, e.g. "apps/myapp/myapp/hooks.py". Long files come a
+page at a time, and the first line says which lines you got and where to continue.
+A negative start_line counts from the end, so start_line=-200 reads the last 200
+lines of a log. site_config.json, keys, .git and each site's private files are
+always refused.""",
+	"search_server_files": """\
+Search the contents of files in the bench directory, like grep.
+
+Searches apps/ unless path says otherwise. pattern narrows it to matching file
+names, e.g. "*.py". query is plain text unless regex=true. Binary files and files
+over 2 MB are skipped. Each match comes back with its path, line number and text;
+read_server_file shows the lines around it.""",
+	"export_apps": """\
+Zip the source code of apps on this bench and return a download link.
+
+Leave apps out to export every app installed on this site that Frappe does not
+maintain itself, i.e. everything except frappe, erpnext, hrms and the like; or name
+the apps to export. Each app is a folder in the zip, without .git, node_modules,
+caches or credential files. files_left_out lists anything that was refused.
+
+download_url works for 60 minutes without signing in, so anyone holding it can
+download the code. Give it only to the user. To save the zip locally, run
+curl -fL -o <file> "<download_url>".""",
 }

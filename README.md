@@ -119,7 +119,7 @@ Every call must pass all of these checks:
 | Read Only Mode | MCP Bridge Settings | Refuses every writing tool, whatever else is ticked. |
 | Write window | MCP Bridge Settings | **Allow Writes For…** turns Read Only Mode off for 15 minutes to 8 hours. Writes are refused the moment it ends, and the form ticks Read Only Mode back on within 5 minutes. |
 | Sensitive fields | MCP Bridge Settings | Masked values come back as `•••` (see below). |
-| Capabilities | MCP Bridge Settings | `read`, `write`, `submit`, `delete`, `import`, `patch`, `sql`, `admin`, `script`. Only `read` is on by default. |
+| Capabilities | MCP Bridge Settings | `read`, `write`, `submit`, `delete`, `import`, `patch`, `sql`, `admin`, `script`, `files`. Only `read` is on by default. |
 | Allowed Roles / IPs | MCP Bridge Settings | The caller must hold an allowed role, and optionally come from an allowed IP or CIDR range. |
 | Doctype allow/block lists | MCP Bridge Settings | `User`, `Role`, `DocPerm`, `Server Script`, `System Settings`, this app's own settings and other permission-carrying doctypes are **always** refused. |
 | Limits | MCP Bridge Settings | Rows per read, documents per write batch, calls per hour. |
@@ -135,6 +135,15 @@ Everything a tool returns goes to an AI model. List fields that must never do so
 - **Indirect reveals are refused.** Calls that would reveal a value some other way are refused: filtering, sorting or grouping on a masked field, using it inside an expression or alias, or naming it in SQL.
 - **`describe_site` lists the masked field names**, so Claude can explain a `•••` instead of guessing.
 - **`run_server_script` is not covered.** A script can read anything its user can, so keep **Allow Server Script** off on a site with masked fields.
+- **Server files are not covered.** Masking applies to documents, not to logs or source files.
+
+### Server files
+
+Tick **Allow Server Files** to let Claude read the code and logs on the server, and export your apps. It is off by default, and only a System Manager can use it, whatever **Allowed Roles** says.
+
+- **Reach.** Everything under the bench directory (`apps/`, `sites/`, `logs/`, `config/`) and nothing outside it. A symlink cannot lead out.
+- **Always refused.** `site_config.json` and `common_site_config.json`, `.env` files, private keys and certificates (`*.pem`, `*.key`), Redis ACLs, `.git`, bench backups, and each site's `private/` folder. `.env.example` is allowed.
+- **Export.** `export_apps` zips every installed app that Frappe does not maintain itself (anything whose publisher is not Frappe Technologies), or the apps you name. The zip leaves out `.git`, `node_modules`, virtualenvs and caches. It returns a download link that works in a browser or with `curl` for 60 minutes without signing in, so treat the link as a password. Switching off MCP access or **Allow Server Files** stops every open link. The zips are deleted within an hour of their link expiring.
 
 ### Tools
 
@@ -142,6 +151,7 @@ Everything a tool returns goes to an AI model. List fields that must never do so
 - **Read**: `get_document`, `get_single`, `list_documents`, `count_documents`, `export_records`, `run_report`, `run_sql` (SELECT only), `get_mcp_logs`, `get_error_logs`
 - **Write**: `create_document`, `update_document`, `bulk_update_documents`, `import_records`, `submit_document`, `cancel_document`, `amend_document`, `delete_document`, `rename_document`
 - **Maintenance**: `list_patches` (one app or all), `get_patch_log`, `run_patch`, `clear_cache`, `reload_doctype`, `force_set_values`, `run_scheduled_job`, `run_server_script`
+- **Server files**: `list_server_files`, `read_server_file`, `search_server_files`, `export_apps`
 
 ### Troubleshooting
 
@@ -156,6 +166,8 @@ Everything a tool returns goes to an AI model. List fields that must never do so
 | `Read Only Mode is on` | Untick it, or the tool is meant to be refused. |
 | `… is not ticked in MCP Bridge Settings` | That capability is off. The message names the exact checkbox. |
 | `… can never be reached through MCP` | The doctype is on the built-in block list. |
+| `… holds credentials or private files` | The file is on the built-in block list for server files. |
+| `This download link is invalid or has expired` | The 60 minutes are up, or Allow Server Files was switched off. Run `export_apps` again. |
 
 ### Development
 
