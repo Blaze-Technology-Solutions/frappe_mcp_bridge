@@ -167,6 +167,10 @@ scheduler_events = {
 			"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings.close_expired_write_window",
 		],
 	},
+	# export_apps zips outlive their one-hour download link by at most an hour.
+	"hourly": [
+		"frappe_mcp_bridge.mcp.handlers.files.clear_old_exports",
+	],
 	"daily": [
 		"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_log.mcp_bridge_log.clear_old_logs",
 	],

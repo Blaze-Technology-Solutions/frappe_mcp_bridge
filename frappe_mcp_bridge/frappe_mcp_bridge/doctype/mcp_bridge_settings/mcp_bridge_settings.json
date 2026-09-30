@@ -32,6 +32,7 @@
   "allow_sql_query",
   "allow_admin_actions",
   "allow_server_script",
+  "allow_server_files",
   "scope_section",
   "restrict_doctypes",
   "allowed_doctypes",
@@ -209,6 +210,13 @@
    "label": "Allow Server Script"
   },
   {
+   "default": "0",
+   "description": "List, read and search files in the bench folder, and export apps as a zip. Site config, keys, .git and each site's private files stay refused. System Managers only, and Sensitive Fields do not apply to file contents.",
+   "fieldname": "allow_server_files",
+   "fieldtype": "Check",
+   "label": "Allow Server Files"
+  },
+  {
    "depends_on": "enabled",
    "fieldname": "scope_section",
    "fieldtype": "Section Break",
@@ -346,7 +354,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-24 00:00:00.000000",
+ "modified": "2026-09-30 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe MCP Bridge",
  "name": "MCP Bridge Settings",

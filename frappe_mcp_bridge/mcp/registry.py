@@ -31,6 +31,7 @@ HANDLER_MODULES = (
 	"frappe_mcp_bridge.mcp.handlers.query",
 	"frappe_mcp_bridge.mcp.handlers.script",
 	"frappe_mcp_bridge.mcp.handlers.logs",
+	"frappe_mcp_bridge.mcp.handlers.files",
 )
 
 
@@ -44,6 +45,8 @@ class Tool:
 	# Which parameter carries the doctype being touched, so the gate can check the
 	# allowed/blocked lists without knowing what the handler does.
 	doctype_param: str | None = None
+	# Likewise for the server file path, checked against the file guard.
+	path_param: str | None = None
 	params: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -58,6 +61,7 @@ def tool(
 	summary: str = "",
 	writes: bool = False,
 	doctype_param: str | None = None,
+	path_param: str | None = None,
 ):
 	def decorator(fn: Callable) -> Callable:
 		_TOOLS[name] = Tool(
@@ -67,6 +71,7 @@ def tool(
 			summary=summary or (fn.__doc__ or "").strip().splitlines()[0],
 			writes=writes,
 			doctype_param=doctype_param,
+			path_param=path_param,
 			params=tuple(fn.__code__.co_varnames[: fn.__code__.co_argcount]),
 		)
 		return fn

@@ -12,7 +12,11 @@ DRY_RUN_BANNER = (
 
 
 def render(envelope: dict) -> str:
-	body = json.dumps(envelope.get("result"), indent=2, default=str, ensure_ascii=False)
+	result = envelope.get("result")
+	# A text result, such as a file's contents, goes out as it is rather than as a JSON string.
+	body = (
+		result if isinstance(result, str) else json.dumps(result, indent=2, default=str, ensure_ascii=False)
+	)
 
 	footer = [f"{envelope.get('duration', 0)}s"]
 	if envelope.get("log"):

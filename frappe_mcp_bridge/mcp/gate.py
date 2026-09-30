@@ -7,8 +7,11 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, now_datetime
 
-from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
-from frappe_mcp_bridge.mcp import masking
+from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import (
+	SYSTEM_MANAGER_CAPABILITIES,
+	get_settings,
+)
+from frappe_mcp_bridge.mcp import file_guard, masking
 from frappe_mcp_bridge.mcp.registry import Tool
 
 
@@ -26,9 +29,11 @@ def check_request(tool: Tool, params: dict) -> None:
 
 	check_sign_in(settings)
 	check_role(settings)
+	check_system_manager(tool)
 	check_ip(settings)
 	check_rate_limit(settings)
 	check_doctype(settings, tool, params)
+	check_path(tool, params)
 
 	reason = masking.refusal(settings, tool, params)
 	if reason:
@@ -65,6 +70,14 @@ def check_role(settings) -> None:
 			frappe.session.user, ", ".join(sorted(allowed_roles))
 		)
 	)
+
+
+def check_system_manager(tool: Tool) -> None:
+	# Checked here rather than with frappe.only_for, which lets everyone through during tests.
+	if tool.capability not in SYSTEM_MANAGER_CAPABILITIES or "System Manager" in frappe.get_roles():
+		return
+
+	raise MCPBlocked(_("{0} is for System Managers only.").format(tool.name))
 
 
 def check_ip(settings) -> None:
@@ -110,6 +123,15 @@ def check_doctype(settings, tool: Tool, params: dict) -> None:
 		allowed, reason = settings.is_doctype_allowed(target)
 		if not allowed:
 			raise MCPBlocked(reason)
+
+
+def check_path(tool: Tool, params: dict) -> None:
+	if not tool.path_param or tool.path_param not in params:
+		return
+
+	reason = file_guard.refusal(params[tool.path_param])
+	if reason:
+		raise MCPBlocked(reason)
 
 
 def assert_doctype_allowed(doctype: str) -> None:

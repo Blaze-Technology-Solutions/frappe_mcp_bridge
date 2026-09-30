@@ -20,10 +20,15 @@ CAPABILITY_FIELDS = {
 	"sql": "allow_sql_query",
 	"admin": "allow_admin_actions",
 	"script": "allow_server_script",
+	"files": "allow_server_files",
 }
 
 # Capabilities that change data. Read Only Mode refuses all of them.
 WRITE_CAPABILITIES = {"write", "submit", "delete", "import", "patch", "admin", "script"}
+
+# Capabilities that reach past this site to the bench it runs on, which Frappe's own
+# roles say nothing about. Only a System Manager may use them, whatever Allowed Roles says.
+SYSTEM_MANAGER_CAPABILITIES = {"files"}
 
 # Refused whatever the settings say: these hold the credentials that would let MCP
 # widen its own permissions.
