@@ -11,22 +11,16 @@ or Allow Server Files stops every outstanding link at once.
 
 import datetime
 import fnmatch
-import hashlib
-import hmac
 import os
 import re
 import time
 import zipfile
 from collections import deque
-from urllib.parse import quote, urlencode
 
 import frappe
 from frappe import _
-from frappe.utils.password import get_encryption_key
-from frappe.utils.response import send_private_file
 
-from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
-from frappe_mcp_bridge.mcp import file_guard
+from frappe_mcp_bridge.mcp import file_guard, links
 from frappe_mcp_bridge.mcp.gate import max_rows
 from frappe_mcp_bridge.mcp.registry import tool
 
@@ -204,6 +198,7 @@ def search_server_files(
 	"export_apps",
 	"files",
 	summary="Zip the source of this site's custom apps and return a download link that works for an hour.",
+	read_only=False,
 )
 def export_apps(apps: list[str] | None = None) -> dict:
 	installed = frappe.get_installed_apps()
@@ -249,36 +244,33 @@ def export_apps(apps: list[str] | None = None) -> dict:
 			os.remove(path)
 		raise
 
-	expires = int(time.time()) + EXPORT_LINK_MINUTES * 60
-
 	return {
 		"apps": exported,
 		"frappe_apps_left_out": frappe_apps,
 		"files_left_out": left_out,
 		"file": name,
 		"size": os.path.getsize(path),
-		"download_url": _download_url(name, expires),
+		"download_url": links.url(DOWNLOAD_METHOD, "export", name, EXPORT_LINK_MINUTES),
 		"link_expires_in_minutes": EXPORT_LINK_MINUTES,
 	}
 
 
 @frappe.whitelist(allow_guest=True, methods=["GET"])
-def download_export(export: str | None = None, expires: str | None = None, signature: str | None = None):
+def download_export(file: str | None = None, expires: str | None = None, signature: str | None = None):
 	"""Serve a zip made by export_apps. The signed link is the credential, so a browser or
 	curl can fetch it without signing in."""
-	allowed, _reason = get_settings().is_capability_allowed("files")
-	if not allowed or not _link_is_valid(export, expires, signature):
-		raise frappe.PermissionError(
-			_("This download link is invalid or has expired. Run export_apps again for a new one.")
-		)
+	if not re.fullmatch(r"[\w.-]+\.zip", file or ""):
+		raise links.invalid()
 
-	if not os.path.isfile(os.path.join(_export_folder(), export)):
-		raise frappe.DoesNotExistError(_("This export has been cleared. Run export_apps again."))
-
-	response = send_private_file(os.path.join(EXPORT_FOLDER, export))
-	# The URL ends in the method name, which is no name for a zip.
-	response.headers["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(export)}"
-	return response
+	return links.download(
+		tool="download_export",
+		capability="files",
+		kind="export",
+		name=file,
+		expires=expires,
+		signature=signature,
+		path=os.path.join(_export_folder(), file),
+	)
 
 
 def clear_old_exports():
@@ -296,26 +288,6 @@ def clear_old_exports():
 def _export_folder() -> str:
 	# Where send_private_file looks, so the download can be handed to nginx in production.
 	return frappe.get_site_path(frappe.local.conf.get("private_path", "private"), EXPORT_FOLDER)
-
-
-def _signature(export: str, expires: int) -> str:
-	message = f"{frappe.local.site}\n{export}\n{expires}".encode()
-	return hmac.new(get_encryption_key().encode(), message, hashlib.sha256).hexdigest()
-
-
-def _download_url(export: str, expires: int) -> str:
-	query = urlencode({"export": export, "expires": expires, "signature": _signature(export, expires)})
-	return frappe.utils.get_url(f"/api/method/{DOWNLOAD_METHOD}?{query}")
-
-
-def _link_is_valid(export: str | None, expires: str | None, signature: str | None) -> bool:
-	if not re.fullmatch(r"[\w.-]+\.zip", export or "") or not str(expires or "").isdigit():
-		return False
-
-	if int(expires) < time.time():
-		return False
-
-	return hmac.compare_digest(_signature(export, int(expires)).encode(), (signature or "").encode())
 
 
 def _is_frappe_app(app: str) -> bool:

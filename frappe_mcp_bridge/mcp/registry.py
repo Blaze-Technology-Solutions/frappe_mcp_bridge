@@ -32,6 +32,7 @@ HANDLER_MODULES = (
 	"frappe_mcp_bridge.mcp.handlers.script",
 	"frappe_mcp_bridge.mcp.handlers.logs",
 	"frappe_mcp_bridge.mcp.handlers.files",
+	"frappe_mcp_bridge.mcp.handlers.backups",
 )
 
 
@@ -42,6 +43,9 @@ class Tool:
 	handler: Callable
 	summary: str = ""
 	writes: bool = False
+	# What the native endpoint tells clients. Differs from `not writes` for a tool that changes
+	# no rows but still leaves something on the server, such as a backup file.
+	read_only: bool = True
 	# Which parameter carries the doctype being touched, so the gate can check the
 	# allowed/blocked lists without knowing what the handler does.
 	doctype_param: str | None = None
@@ -60,6 +64,7 @@ def tool(
 	*,
 	summary: str = "",
 	writes: bool = False,
+	read_only: bool | None = None,
 	doctype_param: str | None = None,
 	path_param: str | None = None,
 ):
@@ -70,6 +75,7 @@ def tool(
 			handler=fn,
 			summary=summary or (fn.__doc__ or "").strip().splitlines()[0],
 			writes=writes,
+			read_only=not writes if read_only is None else read_only,
 			doctype_param=doctype_param,
 			path_param=path_param,
 			params=tuple(fn.__code__.co_varnames[: fn.__code__.co_argcount]),

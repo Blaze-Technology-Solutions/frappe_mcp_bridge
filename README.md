@@ -119,7 +119,7 @@ Every call must pass all of these checks:
 | Read Only Mode | MCP Bridge Settings | Refuses every writing tool, whatever else is ticked. |
 | Write window | MCP Bridge Settings | **Allow Writes For…** turns Read Only Mode off for 15 minutes to 8 hours. Writes are refused the moment it ends, and the form ticks Read Only Mode back on within 5 minutes. |
 | Sensitive fields | MCP Bridge Settings | Masked values come back as `•••` (see below). |
-| Capabilities | MCP Bridge Settings | `read`, `write`, `submit`, `delete`, `import`, `patch`, `sql`, `admin`, `script`, `files`. Only `read` is on by default. |
+| Capabilities | MCP Bridge Settings | `read`, `write`, `submit`, `delete`, `import`, `patch`, `sql`, `admin`, `script`, `files`, `backup`. Only `read` is on by default. |
 | Allowed Roles / IPs | MCP Bridge Settings | The caller must hold an allowed role, and optionally come from an allowed IP or CIDR range. |
 | Doctype allow/block lists | MCP Bridge Settings | `User`, `Role`, `DocPerm`, `Server Script`, `System Settings`, this app's own settings and other permission-carrying doctypes are **always** refused. |
 | Limits | MCP Bridge Settings | Rows per read, documents per write batch, calls per hour. |
@@ -135,7 +135,7 @@ Everything a tool returns goes to an AI model. List fields that must never do so
 - **Indirect reveals are refused.** Calls that would reveal a value some other way are refused: filtering, sorting or grouping on a masked field, using it inside an expression or alias, or naming it in SQL.
 - **`describe_site` lists the masked field names**, so Claude can explain a `•••` instead of guessing.
 - **`run_server_script` is not covered.** A script can read anything its user can, so keep **Allow Server Script** off on a site with masked fields.
-- **Server files are not covered.** Masking applies to documents, not to logs or source files.
+- **Server files and backups are not covered.** Masking applies to documents, not to logs, source files or the database dump a backup holds.
 
 ### Server files
 
@@ -143,7 +143,26 @@ Tick **Allow Server Files** to let Claude read the code and logs on the server, 
 
 - **Reach.** Everything under the bench directory (`apps/`, `sites/`, `logs/`, `config/`) and nothing outside it. A symlink cannot lead out.
 - **Always refused.** `site_config.json` and `common_site_config.json`, `.env` files, private keys and certificates (`*.pem`, `*.key`), Redis ACLs, `.git`, bench backups, and each site's `private/` folder. `.env.example` is allowed.
-- **Export.** `export_apps` zips every installed app that Frappe does not maintain itself (anything whose publisher is not Frappe Technologies), or the apps you name. The zip leaves out `.git`, `node_modules`, virtualenvs and caches. It returns a download link that works in a browser or with `curl` for 60 minutes without signing in, so treat the link as a password. Switching off MCP access or **Allow Server Files** stops every open link. The zips are deleted within an hour of their link expiring.
+- **Export.** `export_apps` zips every installed app that Frappe does not maintain itself (anything whose publisher is not Frappe Technologies), or the apps you name. The zip leaves out `.git`, `node_modules`, virtualenvs and caches. It returns a download link that works in a browser or with `curl` for 60 minutes without signing in, so treat the link as a password. Switching off MCP access or **Allow Server Files** stops every open link, the link respects **Allowed IP Addresses**, and each download is logged in **MCP Bridge Log**. The zips are deleted within an hour of their link expiring.
+
+### Backups
+
+Tick **Allow Backups** to have Claude take a backup of the site on the server and hand you a download link, so you can restore a copy of production on your own machine. It is off by default, and only a System Manager can use it, whatever **Allowed Roles** says. After updating the app, run `bench --site <site> migrate` so the checkbox appears.
+
+> "Back up production and restore it here as `shop.localhost`."
+
+1. **`create_backup`** starts Frappe's own backup in the background, the same code as `bench backup` and the scheduled backup, for the database or, with `with_files`, the public and private files too. A small site answers within the call; for a large one `list_backups` with `wait_seconds=30` follows it.
+2. **`list_backups`** shows every backup on the server however it was made, scheduled ones included, with sizes and the free disk space.
+3. **`get_backup_links`** returns one link per file, valid for 30 minutes, with the restore steps. Claude fetches them with `curl` to your machine and, once you name the local site, runs `bench restore` on it. Restoring **replaces that site's database**.
+
+- **A link is a password.** Anyone holding it can download the file for 30 minutes without signing in, so Claude shows it only to you. It stops working when MCP access or **Allow Backups** is switched off, it respects **Allowed IP Addresses**, and every download is logged in **MCP Bridge Log** with the address that fetched it.
+- **Backups are not masked.** A backup holds every record, including the fields listed under Sensitive Fields and every user's password hash. Keep it on an encrypted disk and delete it when you are done.
+- **The site config is never offered.** Frappe leaves a copy of `site_config.json`, with the database password and encryption key, beside every backup. The app never lists or serves it. So Password fields and two-factor secrets on the restored copy cannot be decrypted, which also stops the copy from using the server's mail, payment and other integrations. If you need them, copy `encryption_key` from the server's `site_config.json` into the local one yourself.
+- **Before the restored copy runs:** `bench --site <site> set-config mute_emails 1` and `bench --site <site> disable-scheduler`. The database holds the server's unsent emails and integration settings.
+- **Disk.** A backup is refused when the free space is less than the estimated size plus 1 GB.
+- **Retention.** Like any Frappe backup, starting one removes this site's backup files older than 23 hours (`keep_backups_for_hours` in `site_config.json`).
+- **It needs a worker.** The backup runs on the `long` queue. If it stays `queued`, no worker is running on the server.
+- **Encrypted and partial backups.** If the site encrypts its backups (System Settings), restore with `--encryption-key`; the key is not part of the download. A partial backup, from a `backup` entry in `site_config.json`, is restored with `bench partial-restore`.
 
 ### Tools
 
@@ -152,6 +171,7 @@ Tick **Allow Server Files** to let Claude read the code and logs on the server, 
 - **Write**: `create_document`, `update_document`, `bulk_update_documents`, `import_records`, `submit_document`, `cancel_document`, `amend_document`, `delete_document`, `rename_document`
 - **Maintenance**: `list_patches` (one app or all), `get_patch_log`, `run_patch`, `clear_cache`, `reload_doctype`, `force_set_values`, `run_scheduled_job`, `run_server_script`
 - **Server files**: `list_server_files`, `read_server_file`, `search_server_files`, `export_apps`
+- **Backups**: `create_backup`, `list_backups`, `get_backup_links`
 
 ### Troubleshooting
 
@@ -167,7 +187,9 @@ Tick **Allow Server Files** to let Claude read the code and logs on the server, 
 | `… is not ticked in MCP Bridge Settings` | That capability is off. The message names the exact checkbox. |
 | `… can never be reached through MCP` | The doctype is on the built-in block list. |
 | `… holds credentials or private files` | The file is on the built-in block list for server files. |
-| `This download link is invalid or has expired` | The 60 minutes are up, or Allow Server Files was switched off. Run `export_apps` again. |
+| `This download link is invalid or has expired` | The link's time is up, or the capability behind it was switched off. Run `export_apps` or `get_backup_links` again. |
+| `Not enough free disk space for a backup` | The server's disk cannot hold the backup plus the 1 GB margin. Free some space or leave out the files. |
+| A backup stays `queued` | No `long` queue worker is running on the server. |
 
 ### Development
 
