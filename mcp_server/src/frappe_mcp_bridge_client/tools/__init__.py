@@ -8,7 +8,7 @@ server still starts, and still describes itself accurately, when the site is unr
 """
 
 from ..client import Bridge
-from . import files, maintenance, read, site, write
+from . import backups, files, maintenance, read, site, write
 
 
 def register_all(mcp, bridge: Bridge) -> None:
@@ -17,3 +17,4 @@ def register_all(mcp, bridge: Bridge) -> None:
 	write.register(mcp, bridge)
 	maintenance.register(mcp, bridge)
 	files.register(mcp, bridge)
+	backups.register(mcp, bridge)

@@ -169,7 +169,7 @@ def _tool_list() -> list[dict]:
 				"description": DESCRIPTIONS.get(name) or tool.summary,
 				"inputSchema": registry.input_schema(tool),
 				"annotations": {
-					"readOnlyHint": not tool.writes,
+					"readOnlyHint": tool.read_only,
 					"destructiveHint": tool.capability in DESTRUCTIVE_CAPABILITIES,
 					"openWorldHint": False,
 				},

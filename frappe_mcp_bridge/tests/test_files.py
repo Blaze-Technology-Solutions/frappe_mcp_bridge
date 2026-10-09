@@ -252,17 +252,41 @@ class TestExport(FileTestCase):
 				{**link, "expires": str(int(link["expires"]) + 60)},
 				None,
 			),
-			("another file", {"allow_server_files": 1}, {**link, "export": "other.zip"}, None),
+			("another file", {"allow_server_files": 1}, {**link, "file": "other.zip"}, None),
 			("capability switched off", {"allow_server_files": 0}, link, None),
 			("expired", {"allow_server_files": 1}, link, expired),
 		):
 			with (
 				self.subTest(label),
 				mcp_settings(**settings),
+				request(method="GET"),
 				clock or contextlib.nullcontext(),
 				self.assertRaises(frappe.PermissionError),
 			):
 				files.download_export(**arguments)
+
+	def test_download_respects_the_ip_list_and_is_logged(self):
+		export = self.export()
+		link = {key: value[0] for key, value in parse_qs(urlparse(export["download_url"]).query).items()}
+		settings = {"allow_server_files": 1, "allowed_ips": "10.0.0.0/8", "log_requests": 1}
+
+		def logged():
+			return frappe.db.count("MCP Bridge Log", {"tool": "download_export", "status": "Success"})
+
+		before = logged()
+
+		with mcp_settings(**settings), request(method="GET", ip="10.1.2.3"):
+			response = files.download_export(**link)
+			response.close()
+
+		self.assertEqual(logged(), before + 1)
+
+		with (
+			mcp_settings(**settings),
+			request(method="GET", ip="203.0.113.9"),
+			self.assertRaises(frappe.PermissionError),
+		):
+			files.download_export(**link)
 
 	def test_old_exports_are_cleared(self):
 		folder = files._export_folder()

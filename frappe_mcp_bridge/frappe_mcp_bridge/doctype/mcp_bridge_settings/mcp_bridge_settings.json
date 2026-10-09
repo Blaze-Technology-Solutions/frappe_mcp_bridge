@@ -33,6 +33,7 @@
   "allow_admin_actions",
   "allow_server_script",
   "allow_server_files",
+  "allow_backups",
   "scope_section",
   "restrict_doctypes",
   "allowed_doctypes",
@@ -217,6 +218,13 @@
    "label": "Allow Server Files"
   },
   {
+   "default": "0",
+   "description": "Take backups of this site on the server and download them through a link that works for 30 minutes. A backup holds every record, including what Sensitive Fields hides and every user's password hash, so leave this off unless you are taking one. System Managers only.",
+   "fieldname": "allow_backups",
+   "fieldtype": "Check",
+   "label": "Allow Backups"
+  },
+  {
    "depends_on": "enabled",
    "fieldname": "scope_section",
    "fieldtype": "Section Break",
@@ -354,7 +362,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-09-30 00:00:00.000000",
+ "modified": "2026-10-08 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe MCP Bridge",
  "name": "MCP Bridge Settings",
