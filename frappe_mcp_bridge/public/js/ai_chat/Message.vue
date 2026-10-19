@@ -101,6 +101,24 @@
 			</div>
 		</div>
 
+		<button
+			v-else-if="message.artifact"
+			type="button"
+			class="ai-chat-artifact-card"
+			:class="{ 'is-open': openArtifact === message.artifact.name }"
+			@click="$emit('open-artifact', message.artifact.name)"
+		>
+			<span class="ai-chat-artifact-card__icon">{{ ICONS[message.artifact.artifact_type] || "📄" }}</span>
+			<span class="ai-chat-artifact-card__text">
+				<strong>{{ message.artifact.title }}</strong>
+				<span class="text-muted">
+					{{ __(message.artifact.artifact_type) }}
+					<template v-if="message.artifact.version > 1"> · {{ __("Version {0}", [message.artifact.version]) }}</template>
+				</span>
+			</span>
+			<span class="ai-chat-artifact-card__open">{{ __("Open") }}</span>
+		</button>
+
 		<details v-else class="ai-chat-tool" :class="{ 'is-error': message.is_error }">
 			<summary>
 				{{ message.is_error ? __("{0} failed", [message.tool_name]) : __("Result of {0}", [message.tool_name]) }}
@@ -125,6 +143,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { ICONS } from "./artifacts";
 import { at, money, render_markdown, summarise_args, tokens } from "./format";
 
 const LIMIT = 4000;
@@ -137,7 +156,9 @@ const props = defineProps({
 	showLocal: { type: Boolean, default: false },
 	// Returns a promise: the buttons stay disabled until the server has answered.
 	onDecide: { type: Function, default: null },
+	openArtifact: { type: String, default: null },
 });
+defineEmits(["open-artifact"]);
 
 const details = ref(false);
 const full = ref(false);
@@ -304,6 +325,49 @@ function copy() {
 
 .ai-chat-tool.is-error {
 	border-left-color: var(--red-400, #f87171);
+}
+
+.ai-chat-artifact-card {
+	align-self: flex-start;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: min(420px, 100%);
+	padding: 10px 12px;
+	text-align: left;
+	color: inherit;
+	background: var(--card-bg, #fff);
+	border: 1px solid var(--border-color, #e5e7eb);
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.ai-chat-artifact-card:hover,
+.ai-chat-artifact-card.is-open {
+	border-color: var(--primary, #2563eb);
+}
+
+.ai-chat-artifact-card__icon {
+	font-size: 20px;
+}
+
+.ai-chat-artifact-card__text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	font-size: var(--text-sm, 12px);
+}
+
+.ai-chat-artifact-card__text strong {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ai-chat-artifact-card__open {
+	font-size: var(--text-xs, 11px);
+	color: var(--primary, #2563eb);
 }
 
 .ai-chat-approval {

@@ -213,6 +213,16 @@ A chat page at `/app/ai-chat`, and an **Ask AI** button on every form, for the p
 - **Continue in a new chat**: when a chat nears the model's context window, the chat offers a fresh one that starts with the end of the old transcript.
 - **Stable requests**: a chat's system prompt and tool list are fixed at its first reply and sent unchanged afterwards, as current Claude models require; each message carries the time it was sent instead. A tool switched off later stays listed but is refused when called.
 
+**Artifacts**
+
+Ask for a chart, dashboard, table, document, letter, diagram or code file and it opens in a panel beside the chat, or over it in the Ask AI drawer. Asking for a change saves a new version, and the panel's version picker keeps the earlier ones.
+
+- **Types**: charts (bar, line, pie, donut, percentage, mixed) drawn with Frappe's own charts; dashboards of number tiles, charts and tables; sortable tables; Markdown documents; static HTML pages; SVG diagrams; code.
+- **Keeping them**: CSV for charts and tables, PNG for charts, the file itself for the rest. **Print** and **Copy source** are in the panel's menu, and documents and pages have **Save as Note**, which keeps a private copy as a Frappe Note owned by the user.
+- **The Artifacts list** in the sidebar holds everything the user has made, across chats. Managers see other people's there too, read-only, as with chats.
+- **Nothing in an artifact runs.** The model sends data and markup, never scripts. The server cleans pages and diagrams before storing them. The page draws charts, tables and dashboards itself, shows pages in a sandbox with scripts, forms, popups and outside requests off, and shows diagrams as images. Outside images and links to other pages are removed, so an artifact cannot send what it shows anywhere. That matters because the model may have read records that someone else wrote. Pages run in a sandbox the panel can't print, so download one and print the file.
+- **Settings**: **Allow Artifacts** (on by default) and **Max Artifact Size** in AI Chat Settings. Artifacts are offered to every model that supports tools, with or without ERP data access, and are deleted with their chat.
+
 **Running it in production**: replies run on the `default` queue, so they need a worker. Text streams over socketio; without it the page checks for progress every few seconds instead.
 
 ### Tools
@@ -245,6 +255,7 @@ A chat page at `/app/ai-chat`, and an **Ask AI** button on every form, for the p
 | AI Chat answers without using the site's data | The model is not ticked **May Read ERP Data**, ERP Data Access is off, MCP access is off, or the user holds none of MCP's Allowed Roles. The chat shows which. |
 | `You have used your AI Chat budget for this month` | Raise the budget in **AI Chat Settings**, for the role or for that user. |
 | `Enter the input and output prices before enabling …` | Every enabled model needs prices so its usage can be billed. Tick **Free / Self-Hosted** for local models. |
+| The AI never makes an artifact | **Allow Artifacts** is off, or the model is not ticked **Supports Tools**. An existing chat keeps the tools it started with, so try a new chat. |
 
 ### Development
 

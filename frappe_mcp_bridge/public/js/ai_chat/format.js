@@ -91,7 +91,7 @@ export function at(datetime) {
 export function summarise_args(args) {
 	if (!args || typeof args !== "object") return "";
 	const parts = [];
-	for (const key of ["doctype", "name", "report_name", "query"]) {
+	for (const key of ["doctype", "name", "report_name", "query", "title"]) {
 		if (args[key]) parts.push(String(args[key]).slice(0, 60));
 	}
 	return parts.join(" · ");

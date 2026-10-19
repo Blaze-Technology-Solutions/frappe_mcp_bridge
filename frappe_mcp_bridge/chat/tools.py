@@ -21,6 +21,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, now_datetime
 
+from frappe_mcp_bridge.chat import artifacts
 from frappe_mcp_bridge.chat.providers.base import ToolDefinition
 from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
 from frappe_mcp_bridge.mcp import registry
@@ -53,6 +54,9 @@ CHAT_WRITE_TOOLS = {
 	"delete_document",
 	"import_records",
 }
+
+# Tools the chat answers itself, without the bridge.
+LOCAL_TOOLS = {artifacts.TOOL_NAME}
 
 MODE_OFF = "Off"
 MODE_READ = "Read only"
@@ -95,19 +99,36 @@ WRITE_NOTE = (
 @dataclass
 class ToolAccess:
 	tools: list[ToolDefinition] = field(default_factory=list)
-	reason: str = ""  # why there are no tools, for the system prompt and the UI
+	reason: str = ""  # why there are no ERP tools, for the system prompt and the UI
 
 	@property
 	def names(self) -> set[str]:
 		return {tool.name for tool in self.tools}
 
 	@property
+	def erp(self) -> bool:
+		"""Whether any tool reads the site's data, as opposed to only making artifacts."""
+		return bool(self.names - LOCAL_TOOLS)
+
+	@property
 	def can_write(self) -> bool:
 		return bool(self.names & CHAT_WRITE_TOOLS)
 
+	@property
+	def artifacts(self) -> bool:
+		return artifacts.TOOL_NAME in self.names
+
 
 def tool_access(settings, model, user: str) -> ToolAccess:
-	"""The tools this user may use with this model right now."""
+	"""The tools this user may use with this model right now: the ERP tools the site
+	allows, and the artifact tool, which reads nothing and so needs no data access."""
+	erp = _erp_access(settings, model, user)
+	if settings.allow_artifacts and model.supports_tools:
+		erp.tools.append(artifacts.TOOL)
+	return erp
+
+
+def _erp_access(settings, model, user: str) -> ToolAccess:
 	from frappe_mcp_bridge.chat.access import may_share_company_data
 
 	mode = settings.erp_access or MODE_OFF
@@ -195,6 +216,11 @@ def run_tool(conversation, message_name: str, call: dict, offered: set, live: To
 
 	if name not in offered:
 		return _error(_("{0} is not available in this chat.").format(name), settings)
+
+	if name in LOCAL_TOOLS:
+		if name not in live.names:
+			return _error(_("Artifacts are switched off in AI Chat Settings."), settings)
+		return artifacts.create(conversation, message_name, call, settings)
 
 	if name not in live.names:
 		return _error(

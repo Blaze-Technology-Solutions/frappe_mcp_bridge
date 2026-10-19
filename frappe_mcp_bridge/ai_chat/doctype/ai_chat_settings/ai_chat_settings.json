@@ -32,6 +32,10 @@
   "alerts_section",
   "budget_alerts",
   "alert_recipients",
+  "artifacts_section",
+  "allow_artifacts",
+  "column_break_artifacts",
+  "max_artifact_kb",
   "attachments_section",
   "allow_attachments",
   "max_attachment_mb",
@@ -186,6 +190,28 @@
    "description": "The user is always emailed. These people get a copy."
   },
   {
+   "fieldname": "artifacts_section",
+   "fieldtype": "Section Break",
+   "label": "Artifacts"
+  },
+  {
+   "fieldname": "allow_artifacts",
+   "fieldtype": "Check",
+   "label": "Allow Artifacts",
+   "default": "1",
+   "description": "Lets the AI make charts, dashboards, tables, documents, diagrams and code that open beside the chat. They never run scripts."
+  },
+  {
+   "fieldname": "column_break_artifacts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "max_artifact_kb",
+   "fieldtype": "Int",
+   "label": "Max Artifact Size (KB)",
+   "default": "200"
+  },
+  {
    "fieldname": "attachments_section",
    "fieldtype": "Section Break",
    "label": "Attachments"
@@ -216,7 +242,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-19 00:00:00.000000",
+ "modified": "2026-10-19 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Settings",

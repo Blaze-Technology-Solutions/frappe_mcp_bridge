@@ -144,6 +144,7 @@ permission_query_conditions = {
 	"AI Chat Message": "frappe_mcp_bridge.chat.access.message_conditions",
 	"AI Chat Action": "frappe_mcp_bridge.chat.access.action_conditions",
 	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.budget_alert_conditions",
+	"AI Chat Artifact": "frappe_mcp_bridge.chat.access.artifact_conditions",
 }
 
 has_permission = {
@@ -151,6 +152,7 @@ has_permission = {
 	"AI Chat Message": "frappe_mcp_bridge.chat.access.has_owned_permission",
 	"AI Chat Action": "frappe_mcp_bridge.chat.access.has_owned_permission",
 	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.has_owned_permission",
+	"AI Chat Artifact": "frappe_mcp_bridge.chat.access.has_owned_permission",
 }
 
 boot_session = "frappe_mcp_bridge.chat.access.boot_session"

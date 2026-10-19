@@ -20,7 +20,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, get_fullname, now_datetime
 
-from frappe_mcp_bridge.chat import access, attachments, billing, tools
+from frappe_mcp_bridge.chat import access, artifacts, attachments, billing, tools
 from frappe_mcp_bridge.chat.providers import get_provider
 from frappe_mcp_bridge.chat.providers.base import (
 	ChatMessage,
@@ -53,6 +53,7 @@ MESSAGE_FIELDS = [
 	"exclude_from_context",
 	"mcp_bridge_log",
 	"action",
+	"artifact",
 	"model",
 	"input_tokens",
 	"cached_input_tokens",
@@ -403,6 +404,7 @@ class Reply:
 					"is_error": 1 if outcome["is_error"] else 0,
 					"mcp_bridge_log": outcome["log"],
 					"action": outcome["action"],
+					"artifact": outcome.get("artifact"),
 				},
 			)
 			self.rows.append(_row(tool_message))
@@ -558,8 +560,10 @@ def holds_company_data(conversation) -> bool:
 		return True
 
 	name = conversation.name
+	# The chat's own tools, such as the artifact tool, read nothing from the site.
+	site_tool = {"conversation": name, "role": "Tool", "tool_name": ("not in", list(tools.LOCAL_TOOLS))}
 	return bool(
-		frappe.db.exists("AI Chat Message", {"conversation": name, "role": "Tool"})
+		frappe.db.exists("AI Chat Message", site_tool)
 		or frappe.db.exists("AI Chat Message", {"conversation": name, "context_text": ("is", "set")})
 		or frappe.db.exists("AI Chat Message", {"conversation": name, "attachments": ("is", "set")})
 	)
@@ -665,7 +669,7 @@ def system_prompt(settings, conversation, offered: tools.ToolAccess) -> str:
 
 	lines.append("Answer in Markdown. Be concise and concrete, and use tables for lists of records.")
 
-	if offered.tools:
+	if offered.erp:
 		lines.append(
 			"You have tools that read this site's data. They run with the user's own permissions and "
 			"the site's MCP Bridge rules, so a refusal means the user may not see or do that: say so "
@@ -688,6 +692,9 @@ def system_prompt(settings, conversation, offered: tools.ToolAccess) -> str:
 			f"You cannot read this site's data in this chat ({offered.reason}). If asked about live "
 			"records, say so and suggest where in the system the user can look."
 		)
+
+	if offered.artifacts:
+		lines.append(artifacts.GUIDE)
 
 	if settings.system_prompt:
 		lines.append(f"Instructions from the company:\n{settings.system_prompt}")
@@ -726,6 +733,7 @@ def message_for_ui(row) -> dict:
 		"is_error": bool(row.is_error),
 		"excluded": bool(row.exclude_from_context),
 		"mcp_bridge_log": row.mcp_bridge_log,
+		"artifact": artifacts.for_ui(row.artifact) if row.artifact else None,
 		"model": row.model,
 		"input_tokens": row.input_tokens or 0,
 		"cached_input_tokens": row.cached_input_tokens or 0,

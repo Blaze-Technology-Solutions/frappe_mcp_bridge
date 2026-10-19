@@ -24,6 +24,8 @@ CHAT_DEFAULTS = {
 	"exchange_rate": 1,
 	"budget_alerts": 1,
 	"allow_attachments": 1,
+	"allow_artifacts": 1,
+	"max_artifact_kb": 200,
 	"max_attachment_mb": 10,
 	"max_attachments": 5,
 }

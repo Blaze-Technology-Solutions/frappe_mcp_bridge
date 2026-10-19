@@ -8,14 +8,19 @@
 			<Sidebar
 				v-if="mode === 'page'"
 				:conversations="conversations"
+				:artifacts="artifact_rows"
+				:tab="sidebar_tab"
 				:active="conversation && conversation.name"
+				:active-artifact="artifact_open"
 				:archived="show_archived"
 				:is-manager="boot.is_manager"
 				:view-user="view_user"
 				:usage="usage"
 				@new="new_chat"
 				@open="select"
+				@open-artifact="open_listed_artifact"
 				@search="(text) => ((search = text), load_list())"
+				@tab="(value) => ((sidebar_tab = value), load_list())"
 				@toggle-archived="(value) => ((show_archived = value), load_list())"
 				@view-user="(user) => ((view_user = user), load_list())"
 			/>
@@ -105,6 +110,8 @@
 						:busy="running"
 						:show-local="show_local(message.display_currency)"
 						:on-decide="decide"
+						:open-artifact="artifact_open"
+						@open-artifact="open_artifact"
 					/>
 
 					<div v-if="running" class="ai-chat__streaming">
@@ -132,6 +139,13 @@
 					@stop="stop"
 				/>
 			</section>
+
+			<ArtifactPanel
+				v-if="artifact_open"
+				:name="artifact_open"
+				class="ai-chat__artifact"
+				@close="artifact_open = null"
+			/>
 		</template>
 
 		<div v-else class="ai-chat__loading text-muted">{{ __("Loading…") }}</div>
@@ -142,6 +156,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { call, EVENT } from "./api";
 import { money, render_markdown } from "./format";
+import ArtifactPanel from "./ArtifactPanel.vue";
 import Composer from "./Composer.vue";
 import Message from "./Message.vue";
 import Sidebar from "./Sidebar.vue";
@@ -167,8 +182,13 @@ const search = ref("");
 const show_archived = ref(false);
 const view_user = ref("");
 const sidebar_open = ref(false);
+const artifact_open = ref(null);
+const sidebar_tab = ref("chats");
+const artifact_rows = ref([]);
 const scroller = ref(null);
 let stick_to_bottom = true;
+// An artifact picked from the sidebar's list, opened once its chat has loaded.
+let pending_artifact = null;
 let last_event = 0;
 let watchdog = null;
 
@@ -238,6 +258,10 @@ onBeforeUnmount(() => {
 });
 
 async function load_list() {
+	if (sidebar_tab.value === "artifacts") {
+		artifact_rows.value = await call("list_artifacts", { user: view_user.value || null });
+		return;
+	}
 	conversations.value = await call("list_conversations", {
 		search: search.value || null,
 		archived: show_archived.value ? 1 : 0,
@@ -251,6 +275,8 @@ async function open(name) {
 		const data = await call("get_conversation", { name });
 		conversation.value = data.conversation;
 		messages.value = data.messages;
+		artifact_open.value = pending_artifact;
+		pending_artifact = null;
 		selected_model.value = data.conversation.model || selected_model.value;
 		running.value = data.conversation.status === "Running";
 		stream_text.value = "";
@@ -278,6 +304,8 @@ function new_chat(route = true) {
 	running.value = false;
 	stream_text.value = "";
 	sidebar_open.value = false;
+	artifact_open.value = null;
+	pending_artifact = null;
 	emit("title", __("AI Chat"));
 	if (route && props.mode === "page") frappe.set_route("ai-chat");
 }
@@ -409,6 +437,7 @@ async function continue_chat() {
 	} else {
 		conversation.value = created;
 		messages.value = [];
+		artifact_open.value = null;
 		emit("title", created.title);
 	}
 }
@@ -419,7 +448,22 @@ function upsert(message) {
 	else {
 		messages.value.push(message);
 		messages.value.sort((a, b) => a.seq - b.seq);
+		// An artifact made during this reply opens as soon as it arrives.
+		if (running.value && message.artifact) open_artifact(message.artifact.name);
 	}
+}
+
+function open_artifact(name) {
+	artifact_open.value = name;
+}
+
+function open_listed_artifact(row) {
+	if (conversation.value && conversation.value.name === row.conversation) {
+		sidebar_open.value = false;
+		return open_artifact(row.name);
+	}
+	pending_artifact = row.name;
+	select(row.conversation);
 }
 
 function rename() {
@@ -514,6 +558,24 @@ defineExpose({ open_from_route });
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
+}
+
+.ai-chat__artifact {
+	width: min(48%, 720px);
+	flex-shrink: 0;
+}
+
+/* The drawer has no room beside the chat, so the artifact covers it until closed. */
+.ai-chat--drawer {
+	position: relative;
+}
+
+.ai-chat--drawer .ai-chat__artifact {
+	position: absolute;
+	inset: 0;
+	z-index: 6;
+	width: auto;
+	border-left: none;
 }
 
 .ai-chat__header {
@@ -717,6 +779,14 @@ defineExpose({ open_from_route });
 
 	.ai-chat--page {
 		position: relative;
+	}
+
+	.ai-chat--page .ai-chat__artifact {
+		position: absolute;
+		inset: 0;
+		z-index: 6;
+		width: auto;
+		border-left: none;
 	}
 
 	.ai-chat__total {
