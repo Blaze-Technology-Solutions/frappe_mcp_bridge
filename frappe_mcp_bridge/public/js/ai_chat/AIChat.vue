@@ -36,12 +36,7 @@
 					</button>
 					<div class="ai-chat__title" :title="title">
 						<span class="ai-chat__title-text" @click="rename">{{ title }}</span>
-						<span v-if="conversation && conversation.context_doctype" class="ai-chat__context">
-							{{ conversation.context_doctype }} · {{ conversation.context_name }}
-						</span>
-						<span v-else-if="!conversation && context" class="ai-chat__context">
-							{{ context.doctype }} · {{ context.name }}
-						</span>
+						<span v-if="context_label" class="ai-chat__context">{{ context_label }}</span>
 					</div>
 					<div class="ai-chat__header-meta">
 						<span v-if="conversation" class="ai-chat__total" :title="total_title">
@@ -101,6 +96,16 @@
 						<p v-else-if="model_info" class="text-muted">{{ model_info.erp_note }}</p>
 					</div>
 
+					<button
+						v-if="has_more"
+						type="button"
+						class="btn btn-default btn-xs ai-chat__older"
+						:disabled="loading_older"
+						@click="load_older"
+					>
+						{{ loading_older ? __("Loading…") : __("Show earlier messages") }}
+					</button>
+
 					<Message
 						v-for="message in messages"
 						:key="message.name"
@@ -111,7 +116,11 @@
 						:show-local="show_local(message.display_currency)"
 						:on-decide="decide"
 						:open-artifact="artifact_open"
+						:rating="feedback[message.name] || ''"
+						:on-rate="read_only ? null : rate"
+						:can-regenerate="message.name === regenerable"
 						@open-artifact="open_artifact"
+						@regenerate="regenerate"
 					/>
 
 					<div v-if="running" class="ai-chat__streaming">
@@ -174,6 +183,9 @@ const usage = ref(null);
 const conversations = ref([]);
 const conversation = ref(null);
 const messages = ref([]);
+const has_more = ref(false);
+const loading_older = ref(false);
+const feedback = ref({});
 const running = ref(false);
 const stream_text = ref("");
 const tool_status = ref("");
@@ -200,7 +212,23 @@ const first_name = computed(() => (boot.value ? boot.value.full_name.split(" ")[
 const model_info = computed(() =>
 	boot.value ? boot.value.models.find((m) => m.name === selected_model.value) : null
 );
+// A list or report the chat was opened from, or null when it was a single document.
+const opened_view = computed(() =>
+	conversation.value ? conversation.value.context_view : props.context && props.context.kind ? props.context : null
+);
+const context_label = computed(() => {
+	const view = opened_view.value;
+	if (view && view.kind === "report") return `${__("Report")} · ${view.report}`;
+	if (view) {
+		return `${view.doctype} · ${view.names.length ? __("{0} selected", [view.names.length]) : __("as filtered")}`;
+	}
+	const c = conversation.value;
+	if (c && c.context_doctype) return `${c.context_doctype} · ${c.context_name}`;
+	return !c && props.context ? `${props.context.doctype} · ${props.context.name}` : "";
+});
+// Templates fill placeholders from one document, so lists and reports offer none.
 const context_for_templates = computed(() => {
+	if (opened_view.value) return null;
 	if (conversation.value && conversation.value.context_doctype) {
 		return { doctype: conversation.value.context_doctype, name: conversation.value.context_name };
 	}
@@ -275,6 +303,8 @@ async function open(name) {
 		const data = await call("get_conversation", { name });
 		conversation.value = data.conversation;
 		messages.value = data.messages;
+		has_more.value = data.has_more;
+		feedback.value = data.feedback || {};
 		artifact_open.value = pending_artifact;
 		pending_artifact = null;
 		selected_model.value = data.conversation.model || selected_model.value;
@@ -301,6 +331,8 @@ function select(name) {
 function new_chat(route = true) {
 	conversation.value = null;
 	messages.value = [];
+	has_more.value = false;
+	feedback.value = {};
 	running.value = false;
 	stream_text.value = "";
 	sidebar_open.value = false;
@@ -312,10 +344,12 @@ function new_chat(route = true) {
 
 async function ensure_conversation() {
 	if (conversation.value) return conversation.value.name;
+	const view = props.context && props.context.kind ? props.context : null;
 	const created = await call("create_conversation", {
 		model: selected_model.value,
-		context_doctype: props.context ? props.context.doctype : null,
-		context_name: props.context ? props.context.name : null,
+		context_doctype: props.context && !view ? props.context.doctype : null,
+		context_name: props.context && !view ? props.context.name : null,
+		context_view: view ? JSON.stringify(view) : null,
 	});
 	conversation.value = created;
 	if (props.mode === "page") {
@@ -361,10 +395,15 @@ async function stop() {
 	await call("stop", { conversation: conversation.value.name });
 }
 
-// Awaited by the approval card, which keeps its buttons disabled until this settles.
-async function decide(action, approve) {
+// Awaited by the approval card, which keeps its buttons disabled until this settles. rows
+// are the ticked rows of a write over many records, or null for all of them.
+async function decide(action, approve, rows = null) {
 	try {
-		const result = await call("decide_action", { action, approve: approve ? 1 : 0 });
+		const result = await call("decide_action", {
+			action,
+			approve: approve ? 1 : 0,
+			rows: rows ? JSON.stringify(rows) : null,
+		});
 		if (result.running) begin_running();
 	} finally {
 		await refresh();
@@ -405,13 +444,16 @@ async function finish() {
 	if (props.mode === "page") load_list();
 }
 
-// full reloads every message, to pick up changed approval cards; otherwise only what
-// arrived after the last message held is fetched and added.
+// full reloads every message on screen, to pick up changed approval cards; otherwise only
+// what arrived after the last message held is fetched and added.
 async function refresh(full = true) {
 	if (!conversation.value) return;
-	const after = messages.value.length ? Math.max(...messages.value.map((m) => m.seq)) : 0;
-	const data = await call("poll", { name: conversation.value.name, after_seq: full ? 0 : after });
+	const seqs = messages.value.map((m) => m.seq);
+	const after = seqs.length ? Math.max(...seqs) : 0;
+	const first = seqs.length ? Math.min(...seqs) : 1;
+	const data = await call("poll", { name: conversation.value.name, after_seq: full ? first - 1 : after });
 	conversation.value = data.conversation;
+	feedback.value = data.feedback || feedback.value;
 	if (full) messages.value = data.messages;
 	else data.messages.forEach(upsert);
 	emit("title", conversation.value.title);
@@ -440,6 +482,55 @@ async function continue_chat() {
 		artifact_open.value = null;
 		emit("title", created.title);
 	}
+}
+
+// Older messages go on top, with the view kept where the user was reading.
+async function load_older() {
+	if (!conversation.value || !messages.value.length) return;
+	loading_older.value = true;
+	try {
+		const el = scroller.value;
+		const height = el ? el.scrollHeight : 0;
+		const data = await call("older_messages", {
+			name: conversation.value.name,
+			before_seq: Math.min(...messages.value.map((m) => m.seq)),
+		});
+		messages.value = [...data.messages, ...messages.value];
+		has_more.value = data.has_more;
+		nextTick(() => el && (el.scrollTop += el.scrollHeight - height));
+	} finally {
+		loading_older.value = false;
+	}
+}
+
+async function rate(message, rating, note) {
+	await call("set_feedback", { message, rating, note: note || null });
+	feedback.value = { ...feedback.value, [message]: rating };
+}
+
+// The last reply, if it used no tools: only that one can be regenerated.
+const regenerable = computed(() => {
+	if (running.value || read_only.value) return null;
+	const asked = messages.value.findLastIndex((m) => m.role === "User" && !m.is_note);
+	if (asked < 0) return null;
+	const tail = messages.value.slice(asked + 1);
+	if (tail.some((m) => m.role === "Tool" || m.tool_calls.length)) return null;
+	const replies = tail.filter((m) => m.role === "Assistant" && !m.excluded && m.content);
+	return replies.length ? replies[replies.length - 1].name : null;
+});
+
+async function regenerate() {
+	const result = await call("regenerate", {
+		conversation: conversation.value.name,
+		model: selected_model.value,
+	});
+	for (const name of result.replaced) {
+		const index = messages.value.findIndex((m) => m.name === name);
+		if (index >= 0) messages.value.splice(index, 1, { ...messages.value[index], excluded: true, replaced: true });
+	}
+	upsert(result.message);
+	conversation.value = { ...conversation.value, ...result.conversation };
+	begin_running();
 }
 
 function upsert(message) {
@@ -652,6 +743,10 @@ defineExpose({ open_from_route });
 	display: flex;
 	flex-direction: column;
 	gap: var(--ai-chat-gap);
+}
+
+.ai-chat__older {
+	align-self: center;
 }
 
 .ai-chat__empty {

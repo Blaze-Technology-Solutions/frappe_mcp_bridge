@@ -127,6 +127,8 @@ Every call must pass all of these checks:
 | Limits | MCP Bridge Settings | Rows per read, documents per write batch, calls per hour. |
 
 - **Dry run.** Every writing tool takes `dry_run`. The work really runs inside a savepoint and is rolled back, so the errors are the ones a live call would hit. Anything it queued for after commit, such as Frappe's clean-up job after a delete, is discarded with it. Effects outside the database are not undone: a deleted document's attachment files are removed from disk, and on a developer-mode site saving a DocType, Report, Workspace or similar rewrites app files. **Default To Dry Run** makes that the default. `run_patch` is the exception: a patch commits as it goes, so its dry run only reports whether it would run and whether the module imports.
+- **Approve writes in Desk.** With **Approve Writes in Desk** ticked, a write from an MCP client is not made at once. It runs as a dry run (deletes, and records Frappe writes to app files in developer mode, are only previewed) and waits as an **MCP Write Approval**, with a bell notification. The person who asked approves or rejects it on that form, and only then does it run, through every check again, as them. The client is told the change is waiting and can call `get_write_approval` to see how it ended. Approvals expire after **Approval Expires After** minutes (60 by default). It is an alternative to write windows; AI Chat has approval cards of its own.
+- **Prompts.** MCP clients get the AI Prompt Templates their roles allow as prompts. One written for a doctype takes the document's ID and is filled from it with the user's own permissions and masking, and the read is logged.
 - **Audit.** Every call, including refusals, is logged in **MCP Bridge Log**: tool, user, client, IP, duration, outcome and (optionally) payloads. Secrets in payloads are redacted. Old rows are cleared daily according to **Log Retention**.
 
 ### Sensitive fields
@@ -202,11 +204,18 @@ A chat page at `/app/ai-chat` (`/desk/ai-chat` on Frappe v16), and an **Ask AI**
 - **Users** see the cost under each reply, the chat's total, and their month against their budget.
 - **Managers** get the **AI Chat Usage** report (by user, model, provider, day or month) and the **AI Assistant** workspace with spend cards and charts.
 - **Budgets** are set per role or per user, as a monthly USD amount and a daily message count. At the limit the chat stops. The user and the alert recipients are emailed at 80% and 100%.
+- **Messages per Minute** (10 by default) stops a script or a stuck page from sending a flood of messages.
+- **Quality and health**: users rate replies with a thumbs up or down and an optional note, and managers get **AI Reply Ratings** (by model, with the latest complaint) and **AI Model Health** (speed, failures, refusals answered by the fallback model, replies cut off at the length limit).
 
 **Extras**
 
-- **Ask AI** on any form sends that document, masked and read with the user's own permissions, along with the first message.
+- **Ask AI** on any form sends that document, masked and read with the user's own permissions, along with the first message. On a list it sends the ticked rows, or the list as filtered; on a query report, what the report shows with its current filters. Both are read through the bridge's own tools, so they appear in MCP Bridge Log.
+- **Draft with AI** in Frappe's email dialog writes the message from the document and the email being answered. It only fills in the message: the user edits and sends.
+- **Regenerate** the last reply, from the model picked now, when it used no tools. The old reply stays in the chat and the bill, marked replaced, and counts toward the daily limit.
+- **Search** finds chats by what was said as well as by title.
+- **Long chats** open on their latest messages and load earlier ones on request.
 - **Attachments**: images go to models that read images, PDFs natively where the model supports it and as text otherwise, CSV and text files as text.
+- **Changes to many records** (`bulk_update_documents`, `import_records`) list each row on the approval card, so the user can approve some rows and not others.
 - **AI Prompt Template**: ready-made prompts with `{{ doc.fieldname }}` placeholders, by role, optionally shown under Ask AI on one doctype. Placeholders are filled in plainly; templates are not Jinja.
 - **Fallback Model**: tried when a provider fails or declines.
 - **Stop** ends a reply mid-stream, and the tokens already used are still billed.
@@ -218,7 +227,7 @@ A chat page at `/app/ai-chat` (`/desk/ai-chat` on Frappe v16), and an **Ask AI**
 Ask for a chart, dashboard, table, document, letter, diagram or code file and it opens in a panel beside the chat, or over it in the Ask AI drawer. Asking for a change saves a new version, and the panel's version picker keeps the earlier ones.
 
 - **Types**: charts (bar, line, pie, donut, percentage, mixed) drawn with Frappe's own charts; dashboards of number tiles, charts and tables; sortable tables; Markdown documents; static HTML pages; SVG diagrams; code.
-- **Keeping them**: CSV for charts and tables, PNG for charts, the file itself for the rest. **Print** and **Copy source** are in the panel's menu, and documents and pages have **Save as Note**, which keeps a private copy as a Frappe Note owned by the user.
+- **Keeping them**: CSV for charts and tables, PNG for charts (each chart in a dashboard has its own), the file itself for the rest. **Print or save as PDF** and **Copy source** are in the panel's menu, and documents and pages have **Save as Note**, which keeps a private copy as a Frappe Note owned by the user.
 - **The Artifacts list** in the sidebar holds everything the user has made, across chats. Managers see other people's there too, read-only, as with chats.
 - **Nothing in an artifact runs.** The model sends data and markup, never scripts. The server cleans pages and diagrams before storing them. The page draws charts, tables and dashboards itself, shows pages in a sandbox with scripts, forms, popups and outside requests off, and shows diagrams as images. Outside images and links to other pages are removed, so an artifact cannot send what it shows anywhere. That matters because the model may have read records that someone else wrote. Pages run in a sandbox the panel can't print, so download one and print the file.
 - **Settings**: **Allow Artifacts** (on by default) and **Max Artifact Size** in AI Chat Settings. Artifacts are offered to every model that supports tools, with or without ERP data access, and are deleted with their chat.
@@ -228,7 +237,7 @@ Ask for a chart, dashboard, table, document, letter, diagram or code file and it
 ### Tools
 
 - **Orientation**: `site_ping`, `site_capabilities`, `describe_site`, `list_doctypes`, `get_doctype_schema`, `list_reports`
-- **Read**: `get_document`, `get_single`, `list_documents`, `count_documents`, `export_records`, `run_report`, `run_sql` (SELECT only), `get_mcp_logs`, `get_error_logs`
+- **Read**: `get_document`, `get_single`, `list_documents`, `count_documents`, `export_records`, `run_report`, `run_sql` (SELECT only), `get_mcp_logs`, `get_error_logs`, `get_write_approval`
 - **Write**: `create_document`, `update_document`, `bulk_update_documents`, `import_records`, `submit_document`, `cancel_document`, `amend_document`, `delete_document`, `rename_document`
 - **Maintenance**: `list_patches` (one app or all), `get_patch_log`, `run_patch`, `clear_cache`, `reload_doctype`, `force_set_values`, `run_scheduled_job`, `run_server_script`
 - **Server files**: `list_server_files`, `read_server_file`, `search_server_files`, `export_apps`
@@ -255,6 +264,8 @@ Ask for a chart, dashboard, table, document, letter, diagram or code file and it
 | AI Chat answers without using the site's data | The model is not ticked **May Read ERP Data**, ERP Data Access is off, MCP access is off, or the user holds none of MCP's Allowed Roles. The chat shows which. |
 | `You have used your AI Chat budget for this month` | Raise the budget in **AI Chat Settings**, for the role or for that user. |
 | `Enter the input and output prices before enabling …` | Every enabled model needs prices so its usage can be billed. Tick **Free / Self-Hosted** for local models. |
+| A write answers `NOT SAVED YET` with an approval ID | **Approve Writes in Desk** is on. Open the MCP Write Approval from the bell and approve it, then call `get_write_approval`. |
+| `That is 10 messages in the last minute` | **Messages per Minute** in AI Chat Settings. Raise it, or set 0 to turn it off. |
 | The AI never makes an artifact | **Allow Artifacts** is off, or the model is not ticked **Supports Tools**. An existing chat keeps the tools it started with, so try a new chat. |
 
 ### Development
@@ -283,7 +294,18 @@ bench --site <site> set-config allow_tests true
 bench --site <site> run-tests --app frappe_mcp_bridge
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs ruff and the suite on Frappe v15 (Python 3.11) and v16 (Python 3.14) for every push and pull request.
+**Browser tests.** `e2e/` drives AI Chat in Chromium with Playwright, against `e2e/fake_openai.py` instead of a paid model. It covers replies, approvals (including row by row), secrets in an upload, ratings, regenerating, search, Ask AI on lists and reports, Draft with AI, and hostile artifacts that must stay inert and load nothing. The fixture creates a System Manager, so it runs only on sites with `allow_tests` or `developer_mode` set.
+
+```bash
+python e2e/fake_openai.py &                       # port 18080
+bench --site <site> serve --port 8000 &           # plus a worker on the default queue
+bench --site <site> execute frappe_mcp_bridge.tests.e2e_fixtures.setup --kwargs "{'password': '<a test password>'}"
+cd e2e && npm ci && npx playwright install chromium
+E2E_BASE_URL=http://127.0.0.1:8000 E2E_PASSWORD='<the same password>' npx playwright test
+bench --site <site> execute frappe_mcp_bridge.tests.e2e_fixtures.teardown
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs ruff, the suite and the browser tests on Frappe v15 (Python 3.11) and v16 (Python 3.14) for every push and pull request.
 
 ### License
 

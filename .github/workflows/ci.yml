@@ -106,3 +106,34 @@ jobs:
         run: |
           bench --site test_site set-config allow_tests true
           bench --site test_site run-tests --app frappe_mcp_bridge
+
+      # AI Chat in a real browser, against e2e/fake_openai.py instead of a paid model. There
+      # is no socket.io here, so the page gets replies by polling.
+      - name: Browser tests
+        working-directory: /home/runner/frappe-bench
+        run: |
+          bench build
+          bench --site test_site serve --port 8000 > serve.log 2>&1 &
+          bench worker --queue default > worker.log 2>&1 &
+          python $GITHUB_WORKSPACE/e2e/fake_openai.py > fake.log 2>&1 &
+          for attempt in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/method/ping && break; sleep 2; done
+
+          export E2E_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(18) + "Aa1!")')"
+          bench --site test_site execute frappe_mcp_bridge.tests.e2e_fixtures.setup \
+            --kwargs "{'password': '$E2E_PASSWORD'}"
+
+          cd $GITHUB_WORKSPACE/e2e
+          npm ci
+          npx playwright install --with-deps chromium
+          E2E_BASE_URL=http://127.0.0.1:8000 npx playwright test
+
+      - name: Keep the browser test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.frappe }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            /home/runner/frappe-bench/*.log
+          retention-days: 7

@@ -26,6 +26,7 @@
   "column_break_billing",
   "default_monthly_budget",
   "default_daily_messages",
+  "max_messages_per_minute",
   "budgets_section",
   "role_budgets",
   "user_overrides",
@@ -154,6 +155,13 @@
    "description": "0 means no limit."
   },
   {
+   "fieldname": "max_messages_per_minute",
+   "fieldtype": "Int",
+   "label": "Messages per Minute (Each User)",
+   "default": "10",
+   "description": "Stops a script or a stuck page from sending a flood of messages. 0 turns the limit off."
+  },
+  {
    "fieldname": "budgets_section",
    "fieldtype": "Section Break"
   },
@@ -242,7 +250,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-19 13:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Settings",

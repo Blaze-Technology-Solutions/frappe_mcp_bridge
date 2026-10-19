@@ -9,6 +9,7 @@ import json
 import re
 
 import frappe
+from frappe import _
 
 from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings import get_settings
 from frappe_mcp_bridge.mcp import masking, registry
@@ -47,6 +48,74 @@ def document_context(doctype: str, name: str) -> str:
 		f"I opened this chat from {doctype} {name}. Its current data, with sensitive fields hidden:\n"
 		f"```json\n{data}\n```"
 	)
+
+
+# Rows of a list sent when nothing is selected, and selected rows sent at most.
+MAX_LIST_ROWS = 50
+
+
+def check_view(view) -> dict:
+	"""A list or report the chat was opened from, checked now so the drawer can say no at
+	once. Reading it later goes through the bridge's own tools, as any other read."""
+	if not isinstance(view, dict) or view.get("kind") not in ("list", "report"):
+		frappe.throw(_("Open the chat from a list or a report."))
+
+	if view["kind"] == "report":
+		report = str(view.get("report") or "")
+		if not frappe.db.exists("Report", report) or not frappe.has_permission("Report", "read", report):
+			frappe.throw(_("You can't run the report {0}.").format(report), frappe.PermissionError)
+		filters = view.get("filters") or {}
+		return {"kind": "report", "report": report, "filters": filters if isinstance(filters, dict) else {}}
+
+	doctype = str(view.get("doctype") or "")
+	allowed, reason = get_settings().is_doctype_allowed(doctype)
+	if not allowed:
+		frappe.throw(reason, frappe.PermissionError)
+	if not frappe.has_permission(doctype, "read"):
+		frappe.throw(_("You can't read {0} records.").format(doctype), frappe.PermissionError)
+
+	names = [str(name) for name in view.get("names") or []][:MAX_LIST_ROWS]
+	filters = view.get("filters") or []
+	return {"kind": "list", "doctype": doctype, "names": names, "filters": filters if not names else []}
+
+
+def view_context(view: dict) -> str:
+	"""The list or report as the AI may see it: read through the bridge's list_documents or
+	run_report, so the gate, masking and the MCP Bridge Log apply as to any read."""
+	from frappe_mcp_bridge.api import mcp as bridge
+
+	if view["kind"] == "report":
+		envelope = bridge.execute(
+			tool="run_report",
+			params={"report_name": view["report"], "filters": view["filters"], "limit": 100},
+			client="AI Chat",
+		)
+		intro = f"I opened this chat from the report {view['report']}, with filters {json.dumps(view['filters'], default=str)}."
+	else:
+		names = view["names"]
+		envelope = bridge.execute(
+			tool="list_documents",
+			params={
+				"doctype": view["doctype"],
+				"filters": {"name": ["in", names]} if names else view["filters"],
+				"limit": MAX_LIST_ROWS,
+			},
+			client="AI Chat",
+		)
+		intro = (
+			f"I opened this chat from the {view['doctype']} list with {len(names)} rows selected."
+			if names
+			else f"I opened this chat from the {view['doctype']} list, filtered by {json.dumps(view['filters'], default=str)}."
+		)
+
+	if not envelope.get("ok"):
+		reason = (envelope.get("error") or {}).get("message") or "it could not be read"
+		return f"{intro} It could not be read: {reason}"
+
+	data = json.dumps(envelope.get("result"), default=str, indent=1, ensure_ascii=False)
+	if len(data) > MAX_CONTEXT_CHARS:
+		data = data[:MAX_CONTEXT_CHARS] + "\n... (cut short)"
+	return f"{intro} Its data, with sensitive fields hidden:\n```json\n{data}\n```"
 
 
 def render_prompt(prompt: str, doctype: str | None = None, name: str | None = None) -> str:

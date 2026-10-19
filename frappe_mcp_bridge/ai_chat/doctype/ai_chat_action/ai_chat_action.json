@@ -25,8 +25,10 @@
   "params",
   "preview_section",
   "preview",
+  "rows",
   "dry_run_log",
   "result_section",
+  "approved_params",
   "result",
   "result_log",
   "error"
@@ -144,6 +146,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "rows",
+   "fieldtype": "Code",
+   "label": "Rows to Choose From",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "For a write over many records: what the dry run would do to each, so the user can approve some rows and not others."
+  },
+  {
    "fieldname": "dry_run_log",
    "fieldtype": "Data",
    "label": "Dry Run Log",
@@ -153,6 +163,14 @@
    "fieldname": "result_section",
    "fieldtype": "Section Break",
    "label": "Result"
+  },
+  {
+   "fieldname": "approved_params",
+   "fieldtype": "Code",
+   "label": "Approved Parameters",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "Set when only some rows were approved: the parameters that actually ran."
   },
   {
    "fieldname": "result",
@@ -176,7 +194,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 14:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Action",

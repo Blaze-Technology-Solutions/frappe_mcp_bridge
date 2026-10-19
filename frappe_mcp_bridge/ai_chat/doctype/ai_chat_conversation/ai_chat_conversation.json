@@ -19,6 +19,7 @@
   "context_section",
   "context_doctype",
   "context_name",
+  "context_view",
   "continued_from",
   "carry_over",
   "usage_section",
@@ -112,6 +113,14 @@
    "options": "context_doctype"
   },
   {
+   "fieldname": "context_view",
+   "fieldtype": "Code",
+   "label": "Opened From List or Report",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "The list rows or report filters sent with the first message."
+  },
+  {
    "fieldname": "continued_from",
    "fieldtype": "Link",
    "label": "Continued From",
@@ -196,7 +205,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 14:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Conversation",

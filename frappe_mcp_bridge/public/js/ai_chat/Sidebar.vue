@@ -79,6 +79,7 @@
 					<span v-if="row.status === 'Running'" class="ai-chat-sidebar__live" :title="__('Replying')"></span>
 					{{ row.title || __("New chat") }}
 				</span>
+				<span v-if="row.match" class="ai-chat-sidebar__item-match">{{ row.match }}</span>
 				<span class="ai-chat-sidebar__item-meta">
 					<template v-if="viewUser">{{ row.user }} · </template>
 					{{ when(row.last_activity) }}
@@ -239,6 +240,16 @@ function on_search(event) {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.ai-chat-sidebar__item-match {
+	font-size: var(--text-xs, 11px);
+	font-style: italic;
+	color: var(--text-muted, #6b7280);
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 
 .ai-chat-sidebar__live {

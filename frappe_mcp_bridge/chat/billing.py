@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, fmt_money, get_first_day, getdate, today
+from frappe.utils import add_to_date, cint, flt, fmt_money, get_first_day, getdate, now_datetime, today
 
 from frappe_mcp_bridge.chat.access import user_override
 from frappe_mcp_bridge.chat.providers.base import Usage
@@ -23,6 +23,10 @@ ALERT_THRESHOLDS = (80, 100)
 
 
 class BudgetExceeded(frappe.ValidationError):
+	pass
+
+
+class TooFast(frappe.ValidationError):
 	pass
 
 
@@ -74,9 +78,15 @@ def spent_this_month(user: str) -> float:
 
 
 def messages_today(user: str) -> int:
+	return messages_since(user, getdate(today()))
+
+
+def messages_since(user: str, since) -> int:
+	"""Messages sent since then, counting each regenerated reply as one (its notice has is_note set)."""
 	return frappe.db.count(
-		"AI Chat Message",
-		{"user": user, "role": "User", "is_note": 0, "creation": (">=", getdate(today()))},
+		"AI Chat Message", {"user": user, "role": "User", "is_note": 0, "creation": (">=", since)}
+	) + frappe.db.count(
+		"AI Chat Message", {"user": user, "role": "Notice", "is_note": 1, "creation": (">=", since)}
 	)
 
 
@@ -109,6 +119,12 @@ def limits_for(user: str, settings) -> Limits:
 def check_can_send(user: str, settings) -> None:
 	"""Before a new message is accepted."""
 	limits = limits_for(user, settings)
+
+	per_minute = cint(settings.get("max_messages_per_minute"))
+	if per_minute and messages_since(user, add_to_date(now_datetime(), minutes=-1)) >= per_minute:
+		raise TooFast(
+			_("That is {0} messages in the last minute. Wait a moment, then send again.").format(per_minute)
+		)
 
 	if limits.daily_messages and messages_today(user) >= limits.daily_messages:
 		raise BudgetExceeded(

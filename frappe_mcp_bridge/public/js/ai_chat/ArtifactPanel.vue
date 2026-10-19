@@ -45,7 +45,7 @@
 						<button type="button" role="menuitem" @click="choose(copy)">{{ __("Copy source") }}</button>
 						<!-- A page is shown in a sandbox this page can't print; its download prints from the browser. -->
 						<button v-if="kind !== 'html'" type="button" role="menuitem" @click="choose(print)">
-							{{ __("Print") }}
+							{{ __("Print or save as PDF") }}
 						</button>
 						<button v-if="can_keep" type="button" role="menuitem" @click="choose(keep)">
 							{{ __("Save as Note") }}
@@ -75,7 +75,7 @@
 					</div>
 				</div>
 				<div v-for="(chart, index) in data.charts" :key="'c' + index" class="ai-chat-dashboard__card">
-					<ChartBox :spec="chart" />
+					<ChartBox :spec="chart" png-button />
 				</div>
 				<div v-for="(table, index) in data.tables" :key="'t' + index" class="ai-chat-dashboard__card">
 					<DataTable :table="table" />
@@ -163,6 +163,7 @@ function copy() {
 function png() {
 	chart_box.value.png().catch(() => frappe.show_alert({ message: __("The picture could not be made."), indicator: "red" }));
 }
+
 
 function print() {
 	print_copy(body.value, artifact.value.title);
@@ -305,6 +306,10 @@ watch(
 	.ai-chat-print .ai-chat-artifact__source {
 		max-height: none;
 		overflow: visible;
+	}
+
+	.ai-chat-print .ai-chat-chart__bar {
+		display: none;
 	}
 }
 

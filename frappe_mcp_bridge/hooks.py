@@ -147,6 +147,7 @@ permission_query_conditions = {
 	"AI Chat Action": "frappe_mcp_bridge.chat.access.action_conditions",
 	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.budget_alert_conditions",
 	"AI Chat Artifact": "frappe_mcp_bridge.chat.access.artifact_conditions",
+	"AI Chat Feedback": "frappe_mcp_bridge.chat.access.feedback_conditions",
 }
 
 has_permission = {
@@ -155,6 +156,7 @@ has_permission = {
 	"AI Chat Action": "frappe_mcp_bridge.chat.access.has_owned_permission",
 	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.has_owned_permission",
 	"AI Chat Artifact": "frappe_mcp_bridge.chat.access.has_owned_permission",
+	"AI Chat Feedback": "frappe_mcp_bridge.chat.access.has_owned_permission",
 }
 
 boot_session = "frappe_mcp_bridge.chat.access.boot_session"
@@ -183,6 +185,8 @@ scheduler_events = {
 			# AI Chat: approvals nobody acted on, and chats whose reply job died.
 			"frappe_mcp_bridge.chat.tools.expire_pending_actions",
 			"frappe_mcp_bridge.chat.orchestrator.reset_stale_replies",
+			# MCP writes nobody approved in time.
+			"frappe_mcp_bridge.mcp.approvals.expire_pending",
 		],
 	},
 	# export_apps zips outlive their one-hour download link by at most an hour.

@@ -24,6 +24,7 @@
   "attachments",
   "redacted",
   "exclude_from_context",
+  "replaced",
   "tool_section",
   "tool_calls",
   "tool_call_id",
@@ -93,8 +94,9 @@
   {
    "fieldname": "is_note",
    "fieldtype": "Check",
-   "label": "Approval Note",
-   "read_only": 1
+   "label": "Note",
+   "read_only": 1,
+   "description": "On a user message: an Approve or Reject note. On a notice: a regenerated reply, which counts toward the daily message limit."
   },
   {
    "fieldname": "column_break_head",
@@ -161,6 +163,13 @@
    "fieldtype": "Check",
    "label": "Left Out of Later Replies",
    "read_only": 1
+  },
+  {
+   "fieldname": "replaced",
+   "fieldtype": "Check",
+   "label": "Replaced by a Regenerated Reply",
+   "read_only": 1,
+   "description": "Kept for the record and the bill; no longer sent to the model."
   },
   {
    "fieldname": "tool_section",
@@ -345,7 +354,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 14:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Message",

@@ -59,6 +59,9 @@ ALWAYS_BLOCKED_DOCTYPES = {
 	"AI Chat Action",
 	"AI Chat Budget Alert",
 	"AI Chat Artifact",
+	"AI Chat Feedback",
+	# Read through get_write_approval, which shows each person only their own.
+	"MCP Write Approval",
 }
 
 # The longest a single Allow Writes For window may run.

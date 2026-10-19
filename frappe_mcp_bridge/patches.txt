@@ -8,3 +8,4 @@ frappe_mcp_bridge.patches.v1_0.set_default_mcp_settings
 frappe_mcp_bridge.patches.v1_0.enable_api_key_sign_in
 frappe_mcp_bridge.patches.v1_1.setup_ai_chat
 frappe_mcp_bridge.patches.v1_1.enable_ai_chat_artifacts
+frappe_mcp_bridge.patches.v1_1.set_ai_chat_rate_limit

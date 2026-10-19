@@ -24,6 +24,7 @@ OWNED_DOCTYPES = (
 	"AI Chat Action",
 	"AI Chat Budget Alert",
 	"AI Chat Artifact",
+	"AI Chat Feedback",
 )
 
 # What a manager may do with someone else's chat: look, never touch.
@@ -38,6 +39,35 @@ def get_chat_settings():
 	return frappe.get_cached_doc("AI Chat Settings")
 
 
+def visible_templates(doctype: str | None = None) -> list[dict]:
+	"""Enabled AI Prompt Templates the user's roles allow, for doctype if given. AI Chat lists
+	them in the composer; MCP clients get them as prompts."""
+	roles = set(frappe.get_roles())
+	rows = frappe.get_all(
+		"AI Prompt Template",
+		filters={"enabled": 1},
+		fields=["name", "title", "document_type", "model"],
+		order_by="title asc",
+	)
+
+	visible = []
+	for row in rows:
+		allowed = set(
+			frappe.get_all(
+				"MCP Bridge Role",
+				filters={"parent": row.name, "parenttype": "AI Prompt Template"},
+				pluck="role",
+			)
+		)
+		if allowed and not allowed & roles:
+			continue
+		if row.document_type and doctype and row.document_type != doctype:
+			continue
+		visible.append(row)
+
+	return visible
+
+
 def sync_workspace(enabled) -> None:
 	"""Show the AI Assistant workspace only while AI Chat is on. Workspace Managers still see
 	it, marked hidden, as Frappe shows them every hidden workspace."""
@@ -48,7 +78,9 @@ def sync_workspace(enabled) -> None:
 		# Left unmodified, so migrate keeps it; a newer workspace file resets it, which
 		# sync_workspace_after_migrate puts right.
 		frappe.db.set_value("Workspace", WORKSPACE, "is_hidden", hidden, update_modified=False)
-		frappe.clear_cache()
+		# Only what the sidebar is built from: clearing every cache would slow a busy site.
+		frappe.clear_cache(doctype="Workspace")
+		frappe.cache.delete_key("bootinfo")
 
 
 def sync_workspace_after_migrate() -> None:
@@ -186,6 +218,10 @@ def budget_alert_conditions(user=None):
 
 def artifact_conditions(user=None):
 	return _owned_condition("AI Chat Artifact", user)
+
+
+def feedback_conditions(user=None):
+	return _owned_condition("AI Chat Feedback", user)
 
 
 def has_owned_permission(doc, ptype=None, user=None, debug=False):

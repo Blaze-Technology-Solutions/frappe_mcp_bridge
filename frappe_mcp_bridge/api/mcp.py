@@ -21,7 +21,7 @@ from frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_
 	CAPABILITY_FIELDS,
 	get_settings,
 )
-from frappe_mcp_bridge.mcp import gate, logger, masking, registry
+from frappe_mcp_bridge.mcp import approvals, gate, logger, masking, registry
 
 DRY_RUN_SAVEPOINT = "mcp_bridge_dry_run"
 
@@ -163,6 +163,21 @@ def execute(tool: str | None = None, params=None, client: str | None = None, dry
 		)
 
 	is_dry_run = gate.resolve_dry_run(definition, _as_bool(dry_run))
+	if definition.writes and not is_dry_run and approvals.required(client):
+		try:
+			return approvals.propose(definition, params, client, started)
+		except Exception as exception:
+			frappe.db.rollback()
+			return _failure(
+				definition.name,
+				definition.capability,
+				type(exception).__name__,
+				_readable(exception),
+				started,
+				client,
+				params=params,
+			)
+
 	call_params = dict(params)
 	if definition.writes:
 		call_params["dry_run"] = is_dry_run

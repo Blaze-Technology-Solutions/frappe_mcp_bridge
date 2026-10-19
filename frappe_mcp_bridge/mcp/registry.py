@@ -33,6 +33,7 @@ HANDLER_MODULES = (
 	"frappe_mcp_bridge.mcp.handlers.logs",
 	"frappe_mcp_bridge.mcp.handlers.files",
 	"frappe_mcp_bridge.mcp.handlers.backups",
+	"frappe_mcp_bridge.mcp.handlers.approvals",
 )
 
 

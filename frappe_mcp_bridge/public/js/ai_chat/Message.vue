@@ -55,6 +55,28 @@
 			<button v-if="message.content" class="btn btn-link btn-xs ai-chat-msg__copy" @click="copy">
 				{{ __("Copy") }}
 			</button>
+			<template v-if="message.content && !message.replaced">
+				<template v-if="onRate">
+					<button
+						v-for="choice in RATINGS"
+						:key="choice.value"
+						type="button"
+						class="btn btn-link btn-xs ai-chat-msg__rate"
+						:class="{ 'is-on': rating === choice.value }"
+						:title="choice.title"
+						:aria-pressed="rating === choice.value ? 'true' : 'false'"
+						:disabled="rating_busy"
+						@click="rate(choice.value)"
+					>
+						{{ choice.icon }}
+					</button>
+				</template>
+				<span v-else-if="rating" :title="__('Rated by the user')">{{ rating === "Good" ? "👍" : "👎" }}</span>
+			</template>
+			<button v-if="canRegenerate" type="button" class="btn btn-link btn-xs ai-chat-msg__copy" @click="$emit('regenerate')">
+				{{ __("Regenerate") }}
+			</button>
+			<span v-if="message.replaced" class="ai-chat-msg__warn">{{ __("Replaced") }}</span>
 		</div>
 		<div v-if="details" class="ai-chat-msg__details">
 			<span>{{ __("Input") }}: {{ tokens(message.input_tokens) }}</span>
@@ -65,7 +87,9 @@
 			<span>{{ __("Time") }}: {{ (message.latency_ms / 1000).toFixed(1) }}s</span>
 			<span v-if="message.finish_reason">{{ __("Stop") }}: {{ message.finish_reason }}</span>
 			<span v-if="message.usage_estimated" class="ai-chat-msg__warn">{{ __("Estimated usage") }}</span>
-			<span v-if="message.excluded">{{ __("Declined; answered by the fallback model") }}</span>
+			<span v-if="message.excluded">
+				{{ message.replaced ? __("Replaced by a regenerated reply") : __("Declined; answered by the fallback model") }}
+			</span>
 		</div>
 	</div>
 
@@ -90,9 +114,23 @@
 				<summary>{{ action.error ? __("Error") : __("Result") }}</summary>
 				<pre>{{ action.error || action.result }}</pre>
 			</details>
+			<div v-if="action.rows && action.rows.length" class="ai-chat-approval__rows">
+				<label v-for="row in action.rows" :key="row.key" class="ai-chat-approval__row">
+					<input v-if="choosing" v-model="ticked" type="checkbox" :value="row.key" />
+					<span class="ai-chat-approval__row-label">{{ row.label }}</span>
+					<span class="text-muted">{{ row.detail }}</span>
+				</label>
+			</div>
+			<p v-if="action.approved_params" class="ai-chat-approval__hint text-muted">
+				{{ __("Approved for the ticked rows only.") }}
+			</p>
 			<div v-if="action.status === 'Pending' && !readOnly" class="ai-chat-approval__actions">
-				<button class="btn btn-primary btn-sm" :disabled="busy || deciding" @click="decide(true)">
-					{{ __("Approve") }}
+				<button
+					class="btn btn-primary btn-sm"
+					:disabled="busy || deciding || (choosing && !ticked.length)"
+					@click="decide(true)"
+				>
+					{{ choosing ? __("Approve {0} of {1}", [ticked.length, action.rows.length]) : __("Approve") }}
 				</button>
 				<button class="btn btn-default btn-sm" :disabled="busy || deciding" @click="decide(false)">
 					{{ __("Reject") }}
@@ -142,7 +180,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ICONS } from "./artifacts";
 import { at, money, render_markdown, summarise_args, tokens } from "./format";
 
@@ -157,15 +195,35 @@ const props = defineProps({
 	// Returns a promise: the buttons stay disabled until the server has answered.
 	onDecide: { type: Function, default: null },
 	openArtifact: { type: String, default: null },
+	// The owner's thumbs up or down; onRate is null when the chat is read-only.
+	rating: { type: String, default: "" },
+	onRate: { type: Function, default: null },
+	canRegenerate: { type: Boolean, default: false },
 });
-defineEmits(["open-artifact"]);
+defineEmits(["open-artifact", "regenerate"]);
+
+const RATINGS = [
+	{ value: "Good", icon: "👍", title: __("Good reply") },
+	{ value: "Bad", icon: "👎", title: __("Bad reply") },
+];
 
 const details = ref(false);
 const full = ref(false);
 const deciding = ref(false);
+const rating_busy = ref(false);
+// Every row starts ticked; the user unticks the ones to leave alone.
+const ticked = ref([]);
+const choosing = computed(
+	() => Boolean(action.value && action.value.status === "Pending" && !props.readOnly && action.value.rows?.length)
+);
 
 const html = computed(() => render_markdown(props.message.content));
 const action = computed(() => props.message.action);
+watch(
+	() => action.value && action.value.name,
+	() => (ticked.value = (action.value?.rows || []).map((row) => row.key)),
+	{ immediate: true }
+);
 const first_line = computed(() => (props.message.content || "").split("\n")[0]);
 const shown = computed(() =>
 	full.value ? props.message.content : props.message.content.slice(0, LIMIT)
@@ -190,7 +248,7 @@ async function decide(approve) {
 	if (deciding.value || !props.onDecide) return;
 	deciding.value = true;
 	try {
-		await props.onDecide(action.value.name, approve);
+		await props.onDecide(action.value.name, approve, approve && choosing.value ? [...ticked.value] : null);
 	} catch (e) {
 		// frappe.call has already shown the server's reason.
 	} finally {
@@ -200,6 +258,29 @@ async function decide(approve) {
 
 function copy() {
 	frappe.utils.copy_to_clipboard(props.message.content);
+}
+
+// Pressing the lit thumb again clears the rating; a thumbs down asks what went wrong.
+function rate(value) {
+	if (props.rating === value) return save_rating("");
+	if (value === "Good") return save_rating("Good");
+	frappe.prompt(
+		{ fieldname: "note", fieldtype: "Small Text", label: __("What was wrong? (optional)") },
+		({ note }) => save_rating("Bad", note),
+		__("Bad reply"),
+		__("Save")
+	);
+}
+
+async function save_rating(value, note) {
+	rating_busy.value = true;
+	try {
+		await props.onRate(props.message.name, value, note);
+	} catch (e) {
+		// frappe.call has already shown the server's reason.
+	} finally {
+		rating_busy.value = false;
+	}
 }
 </script>
 
@@ -405,6 +486,40 @@ function copy() {
 .ai-chat-approval__hint {
 	margin: 0;
 	font-size: var(--text-sm, 12px);
+}
+
+.ai-chat-msg__rate {
+	padding: 0 2px;
+	font-size: inherit;
+	opacity: 0.45;
+	filter: grayscale(1);
+}
+
+.ai-chat-msg__rate.is-on,
+.ai-chat-msg__rate:hover {
+	opacity: 1;
+	filter: none;
+}
+
+.ai-chat-approval__rows {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 240px;
+	overflow-y: auto;
+	font-size: var(--text-sm, 12px);
+}
+
+.ai-chat-approval__row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin: 0;
+	font-weight: normal;
+}
+
+.ai-chat-approval__row-label {
+	font-family: var(--font-stack-monospace, monospace);
 }
 
 .ai-chat-approval__actions {
