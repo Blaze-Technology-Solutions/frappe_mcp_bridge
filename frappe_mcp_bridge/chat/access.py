@@ -15,6 +15,7 @@ ROLE_USER = "AI Chat User"
 ROLE_MANAGER = "AI Chat Manager"
 CHAT_ROLES = {ROLE_USER, ROLE_MANAGER}
 ADMINISTRATOR = "Administrator"
+WORKSPACE = "AI Assistant"
 
 # Doctypes whose rows each belong to one user through their `user` field.
 OWNED_DOCTYPES = (
@@ -35,6 +36,23 @@ class ChatAccessDenied(frappe.PermissionError):
 
 def get_chat_settings():
 	return frappe.get_cached_doc("AI Chat Settings")
+
+
+def sync_workspace(enabled) -> None:
+	"""Show the AI Assistant workspace only while AI Chat is on. Workspace Managers still see
+	it, marked hidden, as Frappe shows them every hidden workspace."""
+	hidden = 0 if enabled else 1
+	if not frappe.db.exists("Workspace", WORKSPACE):
+		return
+	if frappe.db.get_value("Workspace", WORKSPACE, "is_hidden") != hidden:
+		# Left unmodified, so migrate keeps it; a newer workspace file resets it, which
+		# sync_workspace_after_migrate puts right.
+		frappe.db.set_value("Workspace", WORKSPACE, "is_hidden", hidden, update_modified=False)
+		frappe.clear_cache()
+
+
+def sync_workspace_after_migrate() -> None:
+	sync_workspace(frappe.db.get_single_value("AI Chat Settings", "enabled"))
 
 
 def user_override(settings, user: str):

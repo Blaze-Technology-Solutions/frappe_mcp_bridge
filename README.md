@@ -168,13 +168,13 @@ Tick **Allow Backups** to have Claude take a backup of the site on the server an
 
 ### AI Chat
 
-A chat page at `/app/ai-chat`, and an **Ask AI** button on every form, for the people you choose. Each provider is connected with an API key the company owns. Personal claude.ai or ChatGPT subscriptions cannot be used: the providers do not allow other apps to sign in with them.
+A chat page at `/app/ai-chat` (`/desk/ai-chat` on Frappe v16), and an **Ask AI** button on every form, for the people you choose. Each provider is connected with an API key the company owns. Personal claude.ai or ChatGPT subscriptions cannot be used: the providers do not allow other apps to sign in with them.
 
 **Set up**
 
 1. Run `bench --site <site> migrate` and `bench build --app frappe_mcp_bridge`. The server needs the `anthropic` and `openai` Python packages (`bench setup requirements` installs them), a worker on the `default` queue, and socketio for live streaming.
 2. **AI Provider**: add one per account. Pick the type (Anthropic, OpenAI, Azure OpenAI, Google Gemini, DeepSeek, xAI, Mistral, Groq, OpenRouter, Ollama or any OpenAI-compatible server) and paste the API key. Press **Test Connection**, then **Fetch Models**.
-3. **AI Model**: enter each model's prices per million tokens and enable it. A model cannot be enabled without prices unless it is ticked **Free / Self-Hosted**. Use **Allowed Roles** to limit who can pick it.
+3. **AI Model**: enter each model's prices per million tokens and enable it. A model cannot be enabled without prices unless it is ticked **Free / Self-Hosted**. Use **Allowed Roles** to limit who can pick it. **Run Live Check** tries a streamed reply and a tool call against the real provider. It costs a fraction of a cent, which is billed to an archived chat of whoever ran it.
 4. **AI Chat Settings**: tick **Enable AI Chat**, choose the default model, the currency to show costs in (with its rate to USD) and the budgets.
 5. Give people the **AI Chat User** role. Nobody without it sees the page, the workspace or the button.
 
@@ -194,7 +194,7 @@ A chat page at `/app/ai-chat`, and an **Ask AI** button on every form, for the p
 - **Same rules as MCP, fewer tools.** Chat offers only document and report tools, from a fixed list in `chat/tools.py`. These run as the signed-in user with their own permissions, Read Only Mode, write windows, the doctype lists, sensitive-field masking and the IP list, and every call is written to MCP Bridge Log with client `AI Chat`. The log tools, `run_sql`, patches, admin actions, server scripts, server files and backups stay with MCP clients, because they read across users.
 - **Changes wait for the user.** Nothing is saved until the person chatting presses **Approve** on the card. Before that, a change runs as a dry run that is rolled back, together with anything it queued for after commit. Two kinds are previewed without running at all: deletes, which remove attachment files as they go, and, on developer-mode sites, records that Frappe writes to app files. Approvals expire after 30 minutes by default, and are checked again against the chat's settings when approved.
 - **Nothing to reach through.** Provider keys are stored encrypted and never sent to the browser. Every AI Chat doctype is on the MCP block list, so no tool can read keys or other people's chats. Model output is cleaned of HTML and of images from other sites before it is shown.
-- **Secrets are scrubbed.** API keys, tokens, passwords and card numbers typed into a message are removed before it is stored or sent. Attachments and form data are not scrubbed.
+- **Secrets are scrubbed.** API keys, tokens, passwords and card numbers are removed from typed messages before they are stored or sent, and from the opened document and the text of attachments before they are sent. The user is told what was taken out. Uploaded files are kept as they are, and images and PDFs that go to a model natively are sent unchanged, because they can't be cleaned.
 
 **Billing**
 

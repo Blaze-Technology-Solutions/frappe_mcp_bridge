@@ -6,6 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, flt
 
+from frappe_mcp_bridge.chat import access
+
 
 class AIChatSettings(Document):
 	def validate(self):
@@ -48,3 +50,4 @@ class AIChatSettings(Document):
 
 	def on_update(self):
 		frappe.clear_cache(doctype="AI Chat Settings")
+		access.sync_workspace(self.enabled)

@@ -130,7 +130,20 @@ async function pick(event) {
 				frappe.msgprint(__("{0} is larger than {1} MB.", [file.name, props.attachments.max_mb]));
 				continue;
 			}
-			files.value.push(await upload(conversation, file));
+			const uploaded = await upload(conversation, file);
+			files.value.push(uploaded);
+			if (uploaded.removed && uploaded.removed.length) {
+				frappe.show_alert(
+					{
+						message: __("Before sending, this will be taken out of {0}: {1}", [
+							frappe.utils.escape_html(uploaded.file_name),
+							uploaded.removed.join(", "),
+						]),
+						indicator: "orange",
+					},
+					10
+				);
+			}
 		}
 	} catch (e) {
 		frappe.msgprint(e.message || __("The file could not be uploaded."));

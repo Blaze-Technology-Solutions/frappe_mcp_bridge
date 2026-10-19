@@ -93,6 +93,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
 	def _read(self, stream, request: ChatRequest, on_delta) -> ChatResult:
 		text: list[str] = []
+		reasoning: list[str] = []
 		calls: dict[int, dict] = {}
 		finish_reason = usage = None
 		stopped = False
@@ -109,6 +110,10 @@ class OpenAICompatibleProvider(LLMProvider):
 				if delta is not None and delta.content:
 					text.append(delta.content)
 					on_delta(delta.content)
+				# DeepSeek's thinking. Kept, not shown: it has to go back on later turns.
+				thought = getattr(delta, "reasoning_content", None) if delta is not None else None
+				if thought:
+					reasoning.append(thought)
 
 				for call in (delta.tool_calls if delta is not None else None) or []:
 					index = call.index if call.index is not None else len(calls)
@@ -157,11 +162,15 @@ class OpenAICompatibleProvider(LLMProvider):
 			if slot["name"]
 		]
 
+		thinking = "".join(reasoning)
 		return ChatResult(
 			text=output,
 			tool_calls=tool_calls,
 			usage=_usage(usage) if usage is not None else self._estimate(request, output),
 			stop_reason=finish_reason,
+			raw={"reasoning_content": thinking, "provider_type": self.settings.get("provider_type")}
+			if thinking
+			else None,
 			raw_provider=ADAPTER,
 			request_id=request_id,
 		)
@@ -202,6 +211,9 @@ class OpenAICompatibleProvider(LLMProvider):
 					]
 				elif not message.content:
 					entry["content"] = "(no reply)"
+				reasoning = self._reasoning_for(message)
+				if reasoning:
+					entry["reasoning_content"] = reasoning
 				out.append(entry)
 				continue
 
@@ -215,6 +227,17 @@ class OpenAICompatibleProvider(LLMProvider):
 			out.append({"role": "user", "content": content})
 
 		return out
+
+	def _reasoning_for(self, message) -> str | None:
+		"""The thinking an assistant turn came with, for providers that want it back: DeepSeek
+		answers 400 without it once tools are offered. Only reasoning this provider type wrote
+		is sent, since others reject the field or never wrote it."""
+		raw = message.raw if message.raw_provider == ADAPTER and isinstance(message.raw, dict) else {}
+		if self.settings.get("replay_reasoning") and raw.get("provider_type") == self.settings.get(
+			"provider_type"
+		):
+			return raw.get("reasoning_content")
+		return None
 
 	def _tool_id(self, value: str | None, fallback: str) -> str:
 		if self.settings.get("tool_id_style") == "alnum9":

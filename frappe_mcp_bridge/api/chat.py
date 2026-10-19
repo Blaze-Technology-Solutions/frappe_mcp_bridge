@@ -109,6 +109,8 @@ def list_conversations(
 	access.require_chat_access()
 
 	filters = {"status": "Archived"} if cint(archived) else {"status": ("!=", "Archived")}
+	# A chat opened and never used isn't listed; remove_empty_chats clears it after a day.
+	filters["message_count"] = (">", 0)
 	if user and user != frappe.session.user:
 		# Someone else's chats: managers only, and only to read.
 		if not access.is_manager():
@@ -253,7 +255,9 @@ def send_message(conversation: str, text: str = "", attachment_names=None, model
 
 	clean, removed = scrub.scrub_secrets(text)
 	stored_files = attachments.validate(doc.name, names, settings, chosen)
-	context_text = _first_message_context(doc, chosen, settings)
+	# The opened document and a carried-over chat are cleaned like the message itself.
+	context_text, removed_from_context = scrub.scrub_secrets(_first_message_context(doc, chosen, settings))
+	removed += [kind for kind in removed_from_context if kind not in removed]
 
 	message = orchestrator.insert_message(
 		doc,
