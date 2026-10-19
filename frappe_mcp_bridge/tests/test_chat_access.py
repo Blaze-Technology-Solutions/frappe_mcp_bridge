@@ -57,6 +57,15 @@ class TestChatAccess(ChatTestCase):
 			self.assertFalse(allowed)
 			self.assertIn("blocked", reason)
 
+	def test_the_workspace_shows_only_while_ai_chat_is_on(self):
+		if not frappe.db.exists("Workspace", access.WORKSPACE):
+			self.skipTest("the AI Assistant workspace is not installed")
+
+		access.sync_workspace(False)
+		self.assertEqual(frappe.db.get_value("Workspace", access.WORKSPACE, "is_hidden"), 1)
+		access.sync_workspace(True)
+		self.assertEqual(frappe.db.get_value("Workspace", access.WORKSPACE, "is_hidden"), 0)
+
 	def test_every_endpoint_refuses_a_user_without_the_role(self):
 		with chat_settings():
 			name = self.chat_as(ALICE)

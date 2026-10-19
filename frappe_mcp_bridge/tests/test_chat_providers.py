@@ -2,15 +2,25 @@
 # For license information, please see license.txt
 
 import json
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import frappe
 
+from frappe_mcp_bridge.chat import live_check
 from frappe_mcp_bridge.chat.providers import anthropic as claude
 from frappe_mcp_bridge.chat.providers import from_doc, openai_compatible
-from frappe_mcp_bridge.chat.providers.base import ChatMessage, ChatRequest
+from frappe_mcp_bridge.chat.providers.base import ChatMessage, ChatRequest, ProviderError
 from frappe_mcp_bridge.chat.scrub import scrub_secrets
-from frappe_mcp_bridge.tests.chat_utils import ChatTestCase
-from frappe_mcp_bridge.tests.utils import IntegrationTestCase
+from frappe_mcp_bridge.tests.chat_utils import (
+	ChatTestCase,
+	FakeProvider,
+	chat_settings,
+	make_model,
+	make_user,
+	reply,
+)
+from frappe_mcp_bridge.tests.utils import IntegrationTestCase, as_user
 
 HISTORY = [
 	ChatMessage(
@@ -32,6 +42,20 @@ HISTORY = [
 	),
 	ChatMessage(role="user", content="Thanks"),
 ]
+
+
+class FakeStream:
+	"""Chunks as the OpenAI SDK yields them, with the close() the adapter calls."""
+
+	def __init__(self, chunks):
+		self.chunks = chunks
+		self.response = None
+
+	def __iter__(self):
+		return iter(self.chunks)
+
+	def close(self):
+		pass
 
 
 def request(messages=HISTORY):
@@ -121,6 +145,50 @@ class TestOpenAITranslation(IntegrationTestCase):
 		deepseek_usage = frappe._dict(prompt_tokens=1000, completion_tokens=50, prompt_cache_hit_tokens=600)
 		self.assertEqual(openai_compatible._usage(deepseek_usage).cached_input_tokens, 600)
 
+	def test_deepseek_reasoning_is_kept_and_sent_back_only_to_deepseek(self):
+		# DeepSeek's thinking mode answers 400 unless every earlier turn's reasoning comes back
+		# when tools are offered; OpenAI rejects the field outright.
+		def chunk(content=None, reasoning=None, finish=None, usage=None):
+			delta = SimpleNamespace(content=content, reasoning_content=reasoning, tool_calls=None)
+			choices = [] if usage else [SimpleNamespace(delta=delta, finish_reason=finish)]
+			return SimpleNamespace(choices=choices, usage=usage)
+
+		stream = FakeStream(
+			[
+				chunk(reasoning="The user wants "),
+				chunk(reasoning="a greeting."),
+				chunk(content="Hello"),
+				chunk(finish="stop"),
+				chunk(usage=frappe._dict(prompt_tokens=10, completion_tokens=8)),
+			]
+		)
+		deepseek = adapter(provider_type="DeepSeek", replay_reasoning=True)
+		shown = []
+		result = deepseek._read(stream, request(), shown.append)
+
+		self.assertEqual(result.text, "Hello")
+		self.assertEqual(shown, ["Hello"])
+		self.assertEqual(
+			result.raw, {"reasoning_content": "The user wants a greeting.", "provider_type": "DeepSeek"}
+		)
+
+		history = [
+			ChatMessage(role="user", content="Hi"),
+			ChatMessage(role="assistant", content="Hello", raw=result.raw, raw_provider=result.raw_provider),
+			ChatMessage(role="user", content="Again"),
+		]
+		self.assertEqual(
+			deepseek.translate_messages(request(history))[2]["reasoning_content"],
+			"The user wants a greeting.",
+		)
+		self.assertNotIn(
+			"reasoning_content", adapter(provider_type="OpenAI").translate_messages(request(history))[2]
+		)
+
+		# Reasoning another provider wrote never goes to DeepSeek either.
+		history[1].raw = {"reasoning_content": "x", "provider_type": "xAI"}
+		self.assertNotIn("reasoning_content", deepseek.translate_messages(request(history))[2])
+
 	def test_bad_tool_arguments_are_flagged_not_guessed(self):
 		self.assertEqual(openai_compatible._parse_arguments('{"a": 1}'), {"a": 1})
 		self.assertIn("__invalid_arguments__", openai_compatible._parse_arguments('{"a": '))
@@ -162,6 +230,43 @@ class TestProviderSetup(ChatTestCase):
 
 		model.is_free = 1
 		model.insert()
+
+	def test_a_live_check_tries_a_reply_and_a_tool_round_and_bills_them(self):
+		model = make_model("Checked Model", supports_tools=1)
+		fake = FakeProvider(
+			reply("ready"),
+			reply(tool_calls=[{"id": "call_1", "name": "get_check_number", "args": {}}]),
+			reply("4217"),
+		)
+		with chat_settings(), patch("frappe_mcp_bridge.chat.live_check.from_doc", return_value=fake):
+			result = live_check.run(model)
+
+		self.assertTrue(result["ok"], result["checks"])
+		self.assertEqual([check["ok"] for check in result["checks"]], [True, True, True, True])
+		# The tool's result went back with the call's own id.
+		sent = fake.requests[2].messages[-1]
+		self.assertEqual((sent.role, sent.content, sent.tool_call_id), ("tool", "4217", "call_1"))
+
+		chat = frappe.get_doc("AI Chat Conversation", result["conversation"])
+		self.assertEqual((chat.user, chat.status), (frappe.session.user, "Archived"))
+		self.assertAlmostEqual(chat.cost_usd, result["cost_usd"])
+		roles = frappe.get_all(
+			"AI Chat Message", filters={"conversation": chat.name}, pluck="role", order_by="seq asc"
+		)
+		self.assertEqual(roles, ["User", "Assistant", "User", "Assistant", "Tool", "Assistant"])
+
+	def test_a_failed_live_check_says_why_and_only_system_managers_run_it(self):
+		model = make_model("Broken Model")
+		fake = FakeProvider(ProviderError("The provider returned 401: bad key"))
+		with chat_settings(), patch("frappe_mcp_bridge.chat.live_check.from_doc", return_value=fake):
+			result = live_check.run(model)
+
+		self.assertFalse(result["ok"])
+		self.assertIn("401: bad key", result["checks"][-1]["detail"])
+		self.assertIsNone(result["conversation"])
+
+		with as_user(make_user("ai-chat-live-check@example.com", "AI Chat Manager")):
+			self.assertRaises(frappe.PermissionError, live_check.run, model)
 
 
 class TestScrub(IntegrationTestCase):

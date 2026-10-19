@@ -92,6 +92,8 @@ page_renderer = ["frappe_mcp_bridge.oauth.WellKnownRenderer"]
 
 # before_install = "frappe_mcp_bridge.install.before_install"
 after_install = "frappe_mcp_bridge.install.after_install"
+# A newer workspace file shows the AI Assistant workspace again; hide it if chat is off.
+after_migrate = ["frappe_mcp_bridge.chat.access.sync_workspace_after_migrate"]
 
 # Uninstallation
 # ------------
@@ -189,6 +191,7 @@ scheduler_events = {
 	],
 	"daily": [
 		"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_log.mcp_bridge_log.clear_old_logs",
+		"frappe_mcp_bridge.chat.orchestrator.remove_empty_chats",
 	],
 }
 

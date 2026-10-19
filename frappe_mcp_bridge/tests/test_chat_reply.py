@@ -228,6 +228,67 @@ class TestChatReply(ChatTestCase):
 		self.assertNotIn(key, stored.content)
 		self.assertNotIn(key, fake.requests[0].messages[-1].content)
 
+	def test_secrets_in_attachments_and_the_opened_document_are_removed_before_sending(self):
+		key = "sk-ant-api03-" + "b" * 40
+		todo = make_todo("Server login, password: hunter2-xyz")
+		fake = FakeProvider(reply("Noted."))
+		with mcp_settings(), chat_settings() as settings, as_user(USER), contained(), provider(fake):
+			name = self.start(context_doctype="ToDo", context_name=todo)
+			upload = attachments.save_upload(
+				name, "notes.txt", f"deploy key {key}\nitem,price".encode(), settings
+			)
+			result = api.send_message(name, "Read these", attachment_names=json.dumps([upload["name"]]))
+
+		# The upload says what will be taken out, so the user knows before sending.
+		self.assertEqual(upload["removed"], ["Anthropic API key"])
+		self.assertIn("password", result["removed"])
+
+		sent = fake.requests[0].messages[-1]
+		self.assertIn(f"ToDo {todo}", sent.content)
+		self.assertNotIn("hunter2", sent.content)
+		self.assertNotIn(key, sent.parts[0]["data"])
+		self.assertIn("[API key removed]", sent.parts[0]["data"])
+
+		stored = self.rows(name, "User")[0]
+		self.assertNotIn("hunter2", stored.context_text)
+		self.assertIn("password", stored.redacted)
+		# The file itself stays as the user uploaded it; only what is sent is cleaned.
+		content = frappe.get_doc("File", upload["name"]).get_content()
+		self.assertIn(key, content if isinstance(content, str) else content.decode())
+
+	def test_markup_in_a_file_name_is_taken_out_before_saving(self):
+		# Frappe would rewrite it on save, turning "x.txt" into "x.txt</b>", which no model can read.
+		with chat_settings() as settings, as_user(USER), contained():
+			name = self.start()
+			upload = attachments.save_upload(name, "notes <b>x</_b>.txt", b"a,b", settings)
+			stored = frappe.db.get_value("File", upload["name"], "file_name")
+			model = frappe.get_doc("AI Model", self.model)
+			kept = attachments.validate(name, [upload["name"]], settings, model)
+
+		self.assertNotIn("<", stored)
+		self.assertTrue(stored.endswith(".txt"), stored)
+		self.assertEqual(kept[0]["kind"], "text")
+
+	def test_chats_never_used_are_hidden_and_cleared_after_a_day(self):
+		fake = FakeProvider(reply("Hello."))
+		with chat_settings() as settings, as_user(USER), contained(), provider(fake):
+			empty, used, fresh = self.start(), self.start(), self.start()
+			# A file attached and the tab closed: the chat never got a message.
+			upload = attachments.save_upload(empty, "draft.csv", b"a,b", settings)
+			api.send_message(used, "Hi")
+			listed = [row.name for row in api.list_conversations()]
+		self.assertEqual(listed, [used])
+
+		day_old = add_to_date(now_datetime(), days=-2)
+		for name in (empty, used):
+			frappe.db.set_value("AI Chat Conversation", name, "creation", day_old, update_modified=False)
+
+		orchestrator.remove_empty_chats()
+		self.assertFalse(frappe.db.exists("AI Chat Conversation", empty))
+		self.assertFalse(frappe.db.exists("File", upload["name"]))
+		self.assertTrue(frappe.db.exists("AI Chat Conversation", used))
+		self.assertTrue(frappe.db.exists("AI Chat Conversation", fresh))
+
 	def test_a_failing_provider_falls_back_to_the_next_model(self):
 		backup = make_model("Backup Model")
 		frappe.db.set_value("AI Model", self.model, "fallback_model", backup)

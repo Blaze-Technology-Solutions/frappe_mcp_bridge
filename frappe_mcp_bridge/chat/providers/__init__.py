@@ -31,7 +31,8 @@ PRESETS = {
 		"adapter": "openai",
 		"base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
 	},
-	"DeepSeek": {"adapter": "openai", "base_url": "https://api.deepseek.com"},
+	# Thinking is on by default, and with tools it needs every earlier turn's reasoning back.
+	"DeepSeek": {"adapter": "openai", "base_url": "https://api.deepseek.com", "replay_reasoning": True},
 	"xAI": {"adapter": "openai", "base_url": "https://api.x.ai/v1"},
 	# Mistral rejects tool call ids that are not exactly nine letters and digits.
 	"Mistral": {"adapter": "openai", "base_url": "https://api.mistral.ai/v1", "tool_id_style": "alnum9"},

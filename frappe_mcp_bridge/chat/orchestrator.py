@@ -148,6 +148,23 @@ def reset_stale_replies() -> None:
 			mark_idle(name)
 
 
+def remove_empty_chats() -> None:
+	"""Scheduler hook: chats opened and never used, such as a file attached and the tab
+	closed. They hold no messages, so nothing is lost to the audit trail; unsent uploads go
+	with them. The scheduler runs as the Administrator, the only account that deletes chats."""
+	cutoff = add_to_date(now_datetime(), days=-1)
+	for name in frappe.get_all(
+		"AI Chat Conversation",
+		filters={"message_count": 0, "status": ("!=", "Running"), "creation": ("<", cutoff)},
+		pluck="name",
+	):
+		if frappe.db.exists("AI Chat Message", {"conversation": name}):
+			continue
+		frappe.delete_doc(
+			"AI Chat Conversation", name, force=True, ignore_permissions=True, delete_permanently=True
+		)
+
+
 # The reply job -------------------------------------------------------------------------
 
 
@@ -342,27 +359,9 @@ class Reply:
 	# Storing ---------------------------------------------------------------------------
 
 	def store_assistant(self, model, result: ChatResult, exclude: bool = False):
-		usage = result.usage
 		values = {
-			"role": "Assistant",
-			"content": result.text,
-			"tool_calls": json.dumps(result.tool_calls, default=str) if result.tool_calls else None,
-			"raw_content": json.dumps(result.raw, default=str) if result.raw else None,
-			"raw_provider": result.raw_provider,
+			**assistant_values(model, result, self.settings),
 			"exclude_from_context": 1 if exclude else 0,
-			"model": model.name,
-			"provider_type": model.provider_type,
-			"model_id": model.model_id,
-			"finish_reason": result.stop_reason,
-			"provider_request_id": result.request_id,
-			"latency_ms": result.latency_ms,
-			"input_tokens": usage.input_tokens,
-			"cached_input_tokens": usage.cached_input_tokens,
-			"cache_write_tokens": usage.cache_write_tokens,
-			"output_tokens": usage.output_tokens,
-			"reasoning_tokens": usage.reasoning_tokens,
-			"usage_estimated": 1 if usage.estimated else 0,
-			**billing.stamp_cost(model, usage, self.settings),
 		}
 		message = insert_message(self.conversation, values)
 		add_to_totals(self.conversation.name, message)
@@ -450,6 +449,31 @@ def add_notice(conversation, text: str, is_error: bool = False):
 	frappe.db.commit()
 	publish(conversation, {"type": "message", "message": message_for_ui(_row(message))})
 	return message
+
+
+def assistant_values(model, result: ChatResult, settings) -> dict:
+	"""What an assistant message keeps of one model call: the reply, its usage and its cost."""
+	usage = result.usage
+	return {
+		"role": "Assistant",
+		"content": result.text,
+		"tool_calls": json.dumps(result.tool_calls, default=str) if result.tool_calls else None,
+		"raw_content": json.dumps(result.raw, default=str) if result.raw else None,
+		"raw_provider": result.raw_provider,
+		"model": model.name,
+		"provider_type": model.provider_type,
+		"model_id": model.model_id,
+		"finish_reason": result.stop_reason,
+		"provider_request_id": result.request_id,
+		"latency_ms": result.latency_ms,
+		"input_tokens": usage.input_tokens,
+		"cached_input_tokens": usage.cached_input_tokens,
+		"cache_write_tokens": usage.cache_write_tokens,
+		"output_tokens": usage.output_tokens,
+		"reasoning_tokens": usage.reasoning_tokens,
+		"usage_estimated": 1 if usage.estimated else 0,
+		**billing.stamp_cost(model, usage, settings),
+	}
 
 
 def add_to_totals(conversation: str, message) -> None:
