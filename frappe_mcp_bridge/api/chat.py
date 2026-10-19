@@ -13,7 +13,16 @@ import frappe
 from frappe import _
 from frappe.utils import cint, now_datetime
 
-from frappe_mcp_bridge.chat import access, attachments, billing, context, orchestrator, scrub, tools
+from frappe_mcp_bridge.chat import (
+	access,
+	artifacts,
+	attachments,
+	billing,
+	context,
+	orchestrator,
+	scrub,
+	tools,
+)
 
 MAX_MESSAGE_CHARS = 100_000
 TITLE_CHARS = 60
@@ -38,7 +47,8 @@ def bootstrap(doctype: str | None = None) -> dict:
 				"vision": bool(model.supports_vision),
 				"pdf": bool(model.supports_pdf),
 				"may_read_erp_data": access.may_share_company_data(settings, model),
-				"erp_tools": bool(offered.tools),
+				"erp_tools": offered.erp,
+				"artifacts": offered.artifacts,
 				"erp_note": offered.reason,
 				"can_write": offered.can_write,
 			}
@@ -426,6 +436,89 @@ def continue_in_new_chat(conversation: str) -> dict:
 	)
 	new.insert(ignore_permissions=True)
 	return _conversation_for_ui(new)
+
+
+@frappe.whitelist()
+def get_artifact(name: str) -> dict:
+	"""One artifact version with its content, and the other versions of the same artifact.
+	Readable by whoever may read its chat."""
+	access.require_chat_access()
+	conversation = frappe.db.get_value("AI Chat Artifact", name, "conversation")
+	if not conversation:
+		raise frappe.DoesNotExistError(_("That artifact does not exist."))
+	access.get_conversation(conversation)
+
+	artifact = artifacts.for_ui(name, with_content=True)
+	artifact["versions"] = frappe.get_all(
+		"AI Chat Artifact",
+		filters={"conversation": conversation, "artifact_key": artifact.artifact_key},
+		fields=["name", "version", "creation"],
+		order_by="version asc",
+	)
+	return artifact
+
+
+@frappe.whitelist()
+def list_artifacts(conversation: str | None = None, user: str | None = None) -> list[dict]:
+	"""The latest version of each artifact in one chat, or across all of the caller's own chats.
+	Managers may list one other user's, or everyone's ("all"), to read."""
+	access.require_chat_access()
+	filters = {}
+	if conversation:
+		filters["conversation"] = access.get_conversation(conversation).name
+	elif user and user != frappe.session.user:
+		if not access.is_manager():
+			raise access.ChatAccessDenied(_("Only AI Chat Managers can see other people's artifacts."))
+		if user != "all":
+			filters["user"] = user
+	else:
+		filters["user"] = frappe.session.user
+
+	rows = frappe.get_all(
+		"AI Chat Artifact",
+		filters=filters,
+		fields=[
+			"name",
+			"conversation",
+			"user",
+			"artifact_key",
+			"version",
+			"title",
+			"artifact_type",
+			"creation",
+		],
+		order_by="creation desc",
+		limit_page_length=500,
+	)
+	latest = {}
+	for row in rows:
+		latest.setdefault((row.conversation, row.artifact_key), row)
+	return list(latest.values())
+
+
+@frappe.whitelist(methods=["POST"])
+def save_artifact_as_note(name: str) -> dict:
+	"""Keeps a copy of one of the caller's own documents or pages as a private Note. The Note is
+	made with the caller's own permissions, and Frappe cleans its HTML again on the way in."""
+	access.require_chat_access()
+	artifact = artifacts.for_ui(name, with_content=True)
+	if not artifact:
+		raise frappe.DoesNotExistError(_("That artifact does not exist."))
+	access.get_conversation(artifact.conversation)
+	if artifact.user != frappe.session.user:
+		raise access.ChatAccessDenied(_("Only the person who made an artifact can keep it as a Note."))
+	if artifact.artifact_type not in ("document", "html"):
+		frappe.throw(_("Only documents and pages can be kept as a Note."))
+
+	content = artifact.content
+	if artifact.artifact_type == "document":
+		# Frappe's own cleaning keeps outside images, which would load each time the Note is
+		# opened; the page cleaner takes them out, as the panel never shows them.
+		content = artifacts.clean_html(frappe.utils.md_to_html(content))
+	note = frappe.get_doc(
+		{"doctype": "Note", "title": artifact.title[:140], "public": 0, "content": content}
+	).insert()
+	return {"name": note.name}
 
 
 @frappe.whitelist()

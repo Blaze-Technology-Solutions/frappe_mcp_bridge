@@ -2,10 +2,24 @@
 	<aside class="ai-chat-sidebar">
 		<div class="ai-chat-sidebar__top">
 			<button class="btn btn-primary btn-sm btn-block" @click="$emit('new')">{{ __("New chat") }}</button>
+			<div class="ai-chat-sidebar__tabs" role="tablist">
+				<button
+					v-for="option in TABS"
+					:key="option.value"
+					type="button"
+					role="tab"
+					class="btn btn-xs"
+					:class="tab === option.value ? 'btn-default is-active' : 'btn-link'"
+					:aria-selected="tab === option.value ? 'true' : 'false'"
+					@click="$emit('tab', option.value)"
+				>
+					{{ option.label }}
+				</button>
+			</div>
 			<input
 				class="form-control input-sm"
 				type="search"
-				:placeholder="__('Search chats')"
+				:placeholder="tab === 'artifacts' ? __('Search artifacts') : __('Search chats')"
 				:value="query"
 				@input="on_search"
 			/>
@@ -30,7 +44,29 @@
 			</div>
 		</div>
 
-		<nav class="ai-chat-sidebar__list">
+		<nav v-if="tab === 'artifacts'" class="ai-chat-sidebar__list">
+			<a
+				v-for="row in shown_artifacts"
+				:key="row.name"
+				class="ai-chat-sidebar__item"
+				:class="{ 'is-active': row.name === activeArtifact }"
+				href="#"
+				@click.prevent="$emit('open-artifact', row)"
+			>
+				<span class="ai-chat-sidebar__item-title">{{ ICONS[row.artifact_type] }} {{ row.title }}</span>
+				<span class="ai-chat-sidebar__item-meta">
+					<template v-if="viewUser">{{ row.user }} · </template>
+					{{ __(row.artifact_type) }}
+					<template v-if="row.version > 1"> · {{ __("Version {0}", [row.version]) }}</template>
+					· {{ when(row.creation) }}
+				</span>
+			</a>
+			<p v-if="!shown_artifacts.length" class="ai-chat-sidebar__none text-muted">
+				{{ query ? __("No artifacts match.") : __("No artifacts yet. Ask for a chart, table or document.") }}
+			</p>
+		</nav>
+
+		<nav v-else class="ai-chat-sidebar__list">
 			<a
 				v-for="row in conversations"
 				:key="row.name"
@@ -55,7 +91,7 @@
 		</nav>
 
 		<div class="ai-chat-sidebar__bottom">
-			<label class="ai-chat-sidebar__toggle">
+			<label v-if="tab === 'chats'" class="ai-chat-sidebar__toggle">
 				<input type="checkbox" :checked="archived" @change="$emit('toggle-archived', $event.target.checked)" />
 				{{ __("Show archived") }}
 			</label>
@@ -92,19 +128,33 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { ICONS } from "./artifacts";
 import { money, when } from "./format";
+
+const TABS = [
+	{ value: "chats", label: __("Chats") },
+	{ value: "artifacts", label: __("Artifacts") },
+];
 
 const props = defineProps({
 	conversations: { type: Array, default: () => [] },
+	artifacts: { type: Array, default: () => [] },
+	tab: { type: String, default: "chats" },
 	active: { type: String, default: null },
+	activeArtifact: { type: String, default: null },
 	archived: { type: Boolean, default: false },
 	isManager: { type: Boolean, default: false },
 	viewUser: { type: String, default: "" },
 	usage: { type: Object, default: null },
 });
-const emit = defineEmits(["new", "open", "search", "toggle-archived", "view-user"]);
+const emit = defineEmits(["new", "open", "open-artifact", "search", "tab", "toggle-archived", "view-user"]);
 
 const query = ref("");
+// Artifacts are few enough to filter here; chats are searched on the server.
+const shown_artifacts = computed(() => {
+	const text = query.value.trim().toLowerCase();
+	return text ? props.artifacts.filter((row) => row.title.toLowerCase().includes(text)) : props.artifacts;
+});
 const who = ref("");
 let timer = null;
 
@@ -136,6 +186,15 @@ function on_search(event) {
 	flex-direction: column;
 	gap: 8px;
 	border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.ai-chat-sidebar__tabs {
+	display: flex;
+	gap: 4px;
+}
+
+.ai-chat-sidebar__tabs .btn {
+	flex: 1;
 }
 
 .ai-chat-sidebar__audit {

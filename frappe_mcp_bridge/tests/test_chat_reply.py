@@ -75,6 +75,21 @@ class TestChatReply(ChatTestCase):
 		self.assertTrue(request.messages[-1].content.endswith("Hi there, what can you do for our team?"))
 		self.assertIn(USER, request.system)
 
+	def test_messages_are_stored_and_replayed_exactly_as_written(self):
+		# Frappe rewrites HTML in text fields on save; a chat about markup must survive it.
+		question = 'Why does <div onclick="go()"> fail when a < b?'
+		answer = 'Because:\n\n```html\n<div class="x" onclick="go()">hi</div>\n<script>run()</script>\n```'
+		fake = FakeProvider(reply(answer), reply("Anything else?"))
+		with chat_settings(), as_user(USER), contained(), provider(fake):
+			name = self.start()
+			api.send_message(name, question)
+			api.send_message(name, "Thanks")
+
+		rows = self.rows(name)
+		self.assertTrue(rows[0].content.endswith(question))
+		self.assertEqual(rows[1].content, answer)
+		self.assertEqual(fake.requests[1].messages[1].content, answer)
+
 	def test_read_tools_run_as_the_user_and_are_logged(self):
 		todo = make_todo("check the warehouse")
 		fake = FakeProvider(
@@ -102,7 +117,8 @@ class TestChatReply(ChatTestCase):
 		with mcp_settings(), chat_settings(), as_user(USER), contained(), provider(fake):
 			api.send_message(self.start(model), "List my ToDos")
 
-		self.assertEqual(fake.requests[0].tools, [])
+		# Only the artifact tool, which reads nothing.
+		self.assertEqual([tool.name for tool in fake.requests[0].tools], ["create_artifact"])
 		self.assertIn("cannot read this site's data", fake.requests[0].system)
 
 	def test_tools_follow_the_access_mode_and_the_mcp_gate(self):
@@ -121,7 +137,7 @@ class TestChatReply(ChatTestCase):
 			self.assertFalse(names & {"run_server_script", "run_patch", "create_backup"})
 
 		with mcp_settings(enabled=0), chat_settings() as settings:
-			self.assertFalse(orchestrator.tools.tool_access(settings, model, USER).tools)
+			self.assertFalse(orchestrator.tools.tool_access(settings, model, USER).erp)
 
 	def write_and_wait(self, todo):
 		fake = FakeProvider(

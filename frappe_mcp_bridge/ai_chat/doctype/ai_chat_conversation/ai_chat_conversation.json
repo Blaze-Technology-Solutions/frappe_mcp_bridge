@@ -120,7 +120,7 @@
   },
   {
    "fieldname": "carry_over",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "Carried Over",
    "read_only": 1,
    "description": "The earlier chat's transcript, sent with the first message."
@@ -182,7 +182,7 @@
   },
   {
    "fieldname": "frozen_system",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "System Prompt",
    "read_only": 1
   },
@@ -196,7 +196,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 12:40:00.000000",
+ "modified": "2026-10-19 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Conversation",

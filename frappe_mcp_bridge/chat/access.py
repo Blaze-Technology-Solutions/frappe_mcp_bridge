@@ -17,7 +17,13 @@ CHAT_ROLES = {ROLE_USER, ROLE_MANAGER}
 ADMINISTRATOR = "Administrator"
 
 # Doctypes whose rows each belong to one user through their `user` field.
-OWNED_DOCTYPES = ("AI Chat Conversation", "AI Chat Message", "AI Chat Action", "AI Chat Budget Alert")
+OWNED_DOCTYPES = (
+	"AI Chat Conversation",
+	"AI Chat Message",
+	"AI Chat Action",
+	"AI Chat Budget Alert",
+	"AI Chat Artifact",
+)
 
 # What a manager may do with someone else's chat: look, never touch.
 READ_PTYPES = {"read", "report", "export", "print"}
@@ -158,6 +164,10 @@ def action_conditions(user=None):
 
 def budget_alert_conditions(user=None):
 	return _owned_condition("AI Chat Budget Alert", user)
+
+
+def artifact_conditions(user=None):
+	return _owned_condition("AI Chat Artifact", user)
 
 
 def has_owned_permission(doc, ptype=None, user=None, debug=False):

@@ -13,7 +13,7 @@ class AIChatConversation(Document):
 
 		# Each child record goes through delete_doc, so every one lands in Deleted
 		# Documents and the whole chat can be restored. force skips the link check:
-		# messages and approvals point at each other.
-		for doctype in ("AI Chat Action", "AI Chat Message"):
+		# messages, approvals and artifacts point at each other.
+		for doctype in ("AI Chat Action", "AI Chat Artifact", "AI Chat Message"):
 			for name in frappe.get_all(doctype, filters={"conversation": self.name}, pluck="name"):
 				frappe.delete_doc(doctype, name, force=True, ignore_permissions=True)

@@ -31,6 +31,7 @@
   "is_error",
   "mcp_bridge_log",
   "action",
+  "artifact",
   "provider_section",
   "raw_provider",
   "raw_content",
@@ -132,13 +133,13 @@
   },
   {
    "fieldname": "content",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "Content",
    "read_only": 1
   },
   {
    "fieldname": "context_text",
-   "fieldtype": "Long Text",
+   "fieldtype": "Code",
    "label": "Document Context",
    "read_only": 1
   },
@@ -204,6 +205,13 @@
    "label": "Approval",
    "read_only": 1,
    "options": "AI Chat Action"
+  },
+  {
+   "fieldname": "artifact",
+   "fieldtype": "Link",
+   "label": "Artifact",
+   "options": "AI Chat Artifact",
+   "read_only": 1
   },
   {
    "fieldname": "provider_section",
@@ -337,7 +345,7 @@
  "in_create": 1,
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-18 00:00:00.000000",
+ "modified": "2026-10-19 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Chat Message",

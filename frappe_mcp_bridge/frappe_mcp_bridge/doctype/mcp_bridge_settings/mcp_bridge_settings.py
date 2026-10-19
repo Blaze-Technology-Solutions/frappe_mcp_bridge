@@ -58,6 +58,7 @@ ALWAYS_BLOCKED_DOCTYPES = {
 	"AI Chat Message",
 	"AI Chat Action",
 	"AI Chat Budget Alert",
+	"AI Chat Artifact",
 }
 
 # The longest a single Allow Writes For window may run.
