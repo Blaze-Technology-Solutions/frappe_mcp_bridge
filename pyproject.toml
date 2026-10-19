@@ -9,6 +9,9 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe>=15,<17" # Installed and managed by bench.
+    # AI Chat providers: Claude, and everything that speaks OpenAI's Chat Completions.
+    "anthropic>=1.0,<2",
+    "openai>=1.50,<4",
 ]
 
 [build-system]

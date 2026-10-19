@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 frappe_mcp_bridge.patches.v1_0.set_default_mcp_settings
 frappe_mcp_bridge.patches.v1_0.enable_api_key_sign_in
+frappe_mcp_bridge.patches.v1_1.setup_ai_chat

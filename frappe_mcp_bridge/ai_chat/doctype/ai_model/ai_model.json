@@ -1,0 +1,244 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:model_label",
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "A model users can chat with, who may pick it, and what it costs.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "model_label",
+  "provider",
+  "provider_type",
+  "model_id",
+  "column_break_main",
+  "enabled",
+  "description",
+  "access_section",
+  "allowed_roles",
+  "column_break_access",
+  "may_read_erp_data",
+  "capabilities_section",
+  "supports_tools",
+  "supports_vision",
+  "supports_pdf",
+  "column_break_capabilities",
+  "context_window",
+  "max_output_tokens",
+  "reasoning_effort",
+  "fallback_model",
+  "pricing_section",
+  "is_free",
+  "input_price",
+  "cached_input_price",
+  "column_break_pricing",
+  "cache_write_price",
+  "output_price"
+ ],
+ "fields": [
+  {
+   "fieldname": "model_label",
+   "fieldtype": "Data",
+   "label": "Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "What users see in the model picker, e.g. Claude Opus 5.5."
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Link",
+   "label": "Provider",
+   "options": "AI Provider",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "provider_type",
+   "fieldtype": "Data",
+   "label": "Provider Type",
+   "read_only": 1,
+   "fetch_from": "provider.provider_type"
+  },
+  {
+   "fieldname": "model_id",
+   "fieldtype": "Data",
+   "label": "Model ID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Exactly as the provider names it, e.g. claude-opus-5-5, gpt-5, gemini-2.5-pro or deepseek-chat."
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Shown under the name in the picker."
+  },
+  {
+   "fieldname": "access_section",
+   "fieldtype": "Section Break",
+   "label": "Who May Use It"
+  },
+  {
+   "fieldname": "allowed_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Allowed Roles",
+   "options": "MCP Bridge Role",
+   "description": "Leave empty to let every AI Chat User pick it."
+  },
+  {
+   "fieldname": "column_break_access",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "may_read_erp_data",
+   "fieldtype": "Check",
+   "label": "May Read ERP Data",
+   "default": "0",
+   "description": "Lets this model use the ERP tools, read attachments and see the document a chat was opened from. Leave off for any provider that must not see company data."
+  },
+  {
+   "fieldname": "capabilities_section",
+   "fieldtype": "Section Break",
+   "label": "Capabilities"
+  },
+  {
+   "fieldname": "supports_tools",
+   "fieldtype": "Check",
+   "label": "Supports Tools",
+   "default": "1"
+  },
+  {
+   "fieldname": "supports_vision",
+   "fieldtype": "Check",
+   "label": "Reads Images",
+   "default": "0"
+  },
+  {
+   "fieldname": "supports_pdf",
+   "fieldtype": "Check",
+   "label": "Reads PDFs Natively",
+   "default": "0",
+   "description": "Off: PDFs are sent as extracted text instead."
+  },
+  {
+   "fieldname": "column_break_capabilities",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "context_window",
+   "fieldtype": "Int",
+   "label": "Context Window (tokens)",
+   "default": "128000"
+  },
+  {
+   "fieldname": "max_output_tokens",
+   "fieldtype": "Int",
+   "label": "Max Output Tokens",
+   "default": "16000"
+  },
+  {
+   "fieldname": "reasoning_effort",
+   "fieldtype": "Select",
+   "label": "Reasoning Effort",
+   "options": "\nlow\nmedium\nhigh",
+   "description": "Only for models that support it. Blank uses the provider's default."
+  },
+  {
+   "fieldname": "fallback_model",
+   "fieldtype": "Link",
+   "label": "Fallback Model",
+   "options": "AI Model",
+   "description": "Tried when this model's provider fails or declines a request."
+  },
+  {
+   "fieldname": "pricing_section",
+   "fieldtype": "Section Break",
+   "label": "Pricing (USD per 1M tokens)"
+  },
+  {
+   "fieldname": "is_free",
+   "fieldtype": "Check",
+   "label": "Free / Self-Hosted",
+   "description": "Tick for local models such as Ollama. Usage is still counted, at no cost."
+  },
+  {
+   "fieldname": "input_price",
+   "fieldtype": "Float",
+   "label": "Input",
+   "precision": "4",
+   "depends_on": "eval:!doc.is_free"
+  },
+  {
+   "fieldname": "cached_input_price",
+   "fieldtype": "Float",
+   "label": "Cached Input",
+   "precision": "4",
+   "depends_on": "eval:!doc.is_free",
+   "description": "Blank: 0.1 x input for Anthropic, the input price for others."
+  },
+  {
+   "fieldname": "column_break_pricing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cache_write_price",
+   "fieldtype": "Float",
+   "label": "Cache Write",
+   "precision": "4",
+   "depends_on": "eval:!doc.is_free",
+   "description": "Blank: 1.25 x input for Anthropic, the input price for others."
+  },
+  {
+   "fieldname": "output_price",
+   "fieldtype": "Float",
+   "label": "Output",
+   "precision": "4",
+   "depends_on": "eval:!doc.is_free"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Model",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "role": "AI Chat Manager",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "model_label",
+ "track_changes": 1
+}

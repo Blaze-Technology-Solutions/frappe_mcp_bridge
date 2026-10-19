@@ -1,0 +1,372 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "One message in a chat, with its tokens and cost. Messages can never be edited.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "conversation",
+  "user",
+  "seq",
+  "role",
+  "is_note",
+  "column_break_head",
+  "model",
+  "provider_type",
+  "model_id",
+  "finish_reason",
+  "content_section",
+  "content",
+  "context_text",
+  "attachments",
+  "redacted",
+  "exclude_from_context",
+  "tool_section",
+  "tool_calls",
+  "tool_call_id",
+  "tool_name",
+  "is_error",
+  "mcp_bridge_log",
+  "action",
+  "provider_section",
+  "raw_provider",
+  "raw_content",
+  "usage_section",
+  "input_tokens",
+  "cached_input_tokens",
+  "cache_write_tokens",
+  "output_tokens",
+  "reasoning_tokens",
+  "usage_estimated",
+  "column_break_usage",
+  "cost_usd",
+  "cost_display",
+  "display_currency",
+  "exchange_rate",
+  "latency_ms",
+  "provider_request_id",
+  "error",
+  "request_section",
+  "ip_address",
+  "user_agent"
+ ],
+ "fields": [
+  {
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "label": "Conversation",
+   "read_only": 1,
+   "options": "AI Chat Conversation",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "read_only": 1,
+   "options": "User",
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "seq",
+   "fieldtype": "Int",
+   "label": "Position",
+   "read_only": 1
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "label": "Role",
+   "read_only": 1,
+   "options": "User\nAssistant\nTool\nNotice",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "is_note",
+   "fieldtype": "Check",
+   "label": "Approval Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Link",
+   "label": "Model",
+   "read_only": 1,
+   "options": "AI Model",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "provider_type",
+   "fieldtype": "Data",
+   "label": "Provider Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "model_id",
+   "fieldtype": "Data",
+   "label": "Model ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finish_reason",
+   "fieldtype": "Data",
+   "label": "Finish Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "content_section",
+   "fieldtype": "Section Break",
+   "label": "Content"
+  },
+  {
+   "fieldname": "content",
+   "fieldtype": "Long Text",
+   "label": "Content",
+   "read_only": 1
+  },
+  {
+   "fieldname": "context_text",
+   "fieldtype": "Long Text",
+   "label": "Document Context",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Code",
+   "label": "Attachments",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "redacted",
+   "fieldtype": "Small Text",
+   "label": "Secrets Removed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "exclude_from_context",
+   "fieldtype": "Check",
+   "label": "Left Out of Later Replies",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tool_section",
+   "fieldtype": "Section Break",
+   "label": "Tool Call",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "tool_calls",
+   "fieldtype": "Code",
+   "label": "Tool Calls",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "tool_call_id",
+   "fieldtype": "Data",
+   "label": "Tool Call ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tool_name",
+   "fieldtype": "Data",
+   "label": "Tool",
+   "read_only": 1
+  },
+  {
+   "fieldname": "is_error",
+   "fieldtype": "Check",
+   "label": "Is Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mcp_bridge_log",
+   "fieldtype": "Data",
+   "label": "MCP Bridge Log",
+   "read_only": 1
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Link",
+   "label": "Approval",
+   "read_only": 1,
+   "options": "AI Chat Action"
+  },
+  {
+   "fieldname": "provider_section",
+   "fieldtype": "Section Break",
+   "label": "Provider Data",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "raw_provider",
+   "fieldtype": "Data",
+   "label": "Format",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_content",
+   "fieldtype": "Code",
+   "label": "Raw Content",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "usage_section",
+   "fieldtype": "Section Break",
+   "label": "Usage"
+  },
+  {
+   "fieldname": "input_tokens",
+   "fieldtype": "Int",
+   "label": "Input Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cached_input_tokens",
+   "fieldtype": "Int",
+   "label": "Cached Input Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cache_write_tokens",
+   "fieldtype": "Int",
+   "label": "Cache Write Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "output_tokens",
+   "fieldtype": "Int",
+   "label": "Output Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reasoning_tokens",
+   "fieldtype": "Int",
+   "label": "Reasoning Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "usage_estimated",
+   "fieldtype": "Check",
+   "label": "Usage Estimated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_usage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cost_usd",
+   "fieldtype": "Float",
+   "label": "Cost (USD)",
+   "read_only": 1,
+   "precision": "6",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cost_display",
+   "fieldtype": "Float",
+   "label": "Cost (Display Currency)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "display_currency",
+   "fieldtype": "Data",
+   "label": "Display Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "latency_ms",
+   "fieldtype": "Int",
+   "label": "Latency (ms)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "provider_request_id",
+   "fieldtype": "Data",
+   "label": "Provider Request ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "request_section",
+   "fieldtype": "Section Break",
+   "label": "Request",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "user_agent",
+   "fieldtype": "Small Text",
+   "label": "User Agent",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Chat Message",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "AI Chat User",
+   "read": 1,
+   "if_owner": 1
+  },
+  {
+   "role": "AI Chat Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Administrator",
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "role",
+ "track_changes": 0
+}

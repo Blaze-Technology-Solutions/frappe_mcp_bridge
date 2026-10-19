@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:provider_name",
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "A company account with an AI provider. Billing goes to that account.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "provider_name",
+  "provider_type",
+  "enabled",
+  "column_break_main",
+  "base_url",
+  "api_version",
+  "timeout",
+  "credentials_section",
+  "api_key",
+  "extra_headers",
+  "test_section",
+  "last_tested_on",
+  "last_test_result"
+ ],
+ "fields": [
+  {
+   "fieldname": "provider_name",
+   "fieldtype": "Data",
+   "label": "Provider Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "provider_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Anthropic\nOpenAI\nAzure OpenAI\nGoogle Gemini\nDeepSeek\nxAI\nMistral\nGroq\nOpenRouter\nOllama\nCustom (OpenAI-compatible)",
+   "default": "OpenAI",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "base_url",
+   "fieldtype": "Data",
+   "label": "Base URL",
+   "description": "Filled in from the type. Change it only for a proxy, a self-hosted server or a custom endpoint."
+  },
+  {
+   "fieldname": "api_version",
+   "fieldtype": "Data",
+   "label": "API Version",
+   "depends_on": "eval:doc.provider_type=='Azure OpenAI'",
+   "mandatory_depends_on": "eval:doc.provider_type=='Azure OpenAI'"
+  },
+  {
+   "fieldname": "timeout",
+   "fieldtype": "Int",
+   "label": "Timeout (seconds)",
+   "default": "120"
+  },
+  {
+   "fieldname": "credentials_section",
+   "fieldtype": "Section Break",
+   "label": "Credentials"
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "API Key",
+   "length": 1000,
+   "description": "Stored encrypted. It is used only on the server and never sent to the browser."
+  },
+  {
+   "fieldname": "extra_headers",
+   "fieldtype": "Code",
+   "label": "Extra Headers",
+   "options": "JSON",
+   "description": "Optional, e.g. {\"HTTP-Referer\": \"https://example.com\"} for OpenRouter."
+  },
+  {
+   "fieldname": "test_section",
+   "fieldtype": "Section Break",
+   "label": "Last Test"
+  },
+  {
+   "fieldname": "last_tested_on",
+   "fieldtype": "Datetime",
+   "label": "Tested On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_test_result",
+   "fieldtype": "Small Text",
+   "label": "Result",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Provider",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "provider_name",
+ "track_changes": 1
+}
