@@ -1,0 +1,240 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "Who may chat, what the AI may do and how usage is billed.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "general_section",
+  "enabled",
+  "default_model",
+  "column_break_general",
+  "erp_access",
+  "replies_section",
+  "max_tool_rounds",
+  "tool_result_chars",
+  "column_break_replies",
+  "approval_expiry_minutes",
+  "reply_timeout",
+  "instructions_section",
+  "system_prompt",
+  "billing_section",
+  "display_currency",
+  "exchange_rate",
+  "column_break_billing",
+  "default_monthly_budget",
+  "default_daily_messages",
+  "budgets_section",
+  "role_budgets",
+  "user_overrides",
+  "alerts_section",
+  "budget_alerts",
+  "alert_recipients",
+  "attachments_section",
+  "allow_attachments",
+  "max_attachment_mb",
+  "column_break_attachments",
+  "max_attachments"
+ ],
+ "fields": [
+  {
+   "fieldname": "general_section",
+   "fieldtype": "Section Break",
+   "label": "AI Chat"
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable AI Chat",
+   "default": "0",
+   "description": "Off until ticked. Only users with the AI Chat User or AI Chat Manager role ever see the chat."
+  },
+  {
+   "fieldname": "default_model",
+   "fieldtype": "Link",
+   "label": "Default Model",
+   "options": "AI Model"
+  },
+  {
+   "fieldname": "column_break_general",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "erp_access",
+   "fieldtype": "Select",
+   "label": "ERP Data Access",
+   "options": "Off\nRead only\nRead and write with approval",
+   "default": "Read and write with approval",
+   "description": "What the AI may see and do with this site's data. Off: no tools, no form context and no attachments. MCP Bridge Settings still applies on top: it must be enabled, the user must hold one of its Allowed Roles, and only models marked May Read ERP Data are given access. Changes always wait for the user's approval."
+  },
+  {
+   "fieldname": "replies_section",
+   "fieldtype": "Section Break",
+   "label": "Replies"
+  },
+  {
+   "fieldname": "max_tool_rounds",
+   "fieldtype": "Int",
+   "label": "Max Tool Rounds per Reply",
+   "default": "8"
+  },
+  {
+   "fieldname": "tool_result_chars",
+   "fieldtype": "Int",
+   "label": "Tool Result Size Limit (characters)",
+   "default": "20000"
+  },
+  {
+   "fieldname": "column_break_replies",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approval_expiry_minutes",
+   "fieldtype": "Int",
+   "label": "Approval Expires After (minutes)",
+   "default": "30"
+  },
+  {
+   "fieldname": "reply_timeout",
+   "fieldtype": "Int",
+   "label": "Reply Time Limit (seconds)",
+   "default": "900"
+  },
+  {
+   "fieldname": "instructions_section",
+   "fieldtype": "Section Break",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "system_prompt",
+   "fieldtype": "Small Text",
+   "label": "Extra Instructions for the AI",
+   "description": "Added to the built-in instructions in every chat, e.g. your company's tone or house rules."
+  },
+  {
+   "fieldname": "billing_section",
+   "fieldtype": "Section Break",
+   "label": "Billing"
+  },
+  {
+   "fieldname": "display_currency",
+   "fieldtype": "Link",
+   "label": "Show Costs In",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate (1 USD =)",
+   "default": "1",
+   "precision": "6",
+   "description": "Providers charge in USD. Costs are also shown in the currency above at this rate, and the rate is saved with every reply so later changes never rewrite old bills."
+  },
+  {
+   "fieldname": "column_break_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_monthly_budget",
+   "fieldtype": "Float",
+   "label": "Default Monthly Budget (USD)",
+   "precision": "2",
+   "description": "For users whose roles have no row below. 0 means no limit."
+  },
+  {
+   "fieldname": "default_daily_messages",
+   "fieldtype": "Int",
+   "label": "Default Daily Message Limit",
+   "description": "0 means no limit."
+  },
+  {
+   "fieldname": "budgets_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "role_budgets",
+   "fieldtype": "Table",
+   "label": "Budgets by Role",
+   "options": "AI Chat Role Budget",
+   "description": "A user gets the most generous row among their roles. 0 means no limit."
+  },
+  {
+   "fieldname": "user_overrides",
+   "fieldtype": "Table",
+   "label": "Budgets by User",
+   "options": "AI Chat User Override",
+   "description": "A row here replaces the role budgets for that user; leave a figure at 0 to keep the role's. Tick Block to turn chat off for them."
+  },
+  {
+   "fieldname": "alerts_section",
+   "fieldtype": "Section Break",
+   "label": "Budget Alerts"
+  },
+  {
+   "fieldname": "budget_alerts",
+   "fieldtype": "Check",
+   "label": "Email at 80% and 100% of Budget",
+   "default": "1"
+  },
+  {
+   "fieldname": "alert_recipients",
+   "fieldtype": "Table MultiSelect",
+   "label": "Also Email",
+   "options": "AI Chat Alert Recipient",
+   "description": "The user is always emailed. These people get a copy."
+  },
+  {
+   "fieldname": "attachments_section",
+   "fieldtype": "Section Break",
+   "label": "Attachments"
+  },
+  {
+   "fieldname": "allow_attachments",
+   "fieldtype": "Check",
+   "label": "Allow Attachments",
+   "default": "1"
+  },
+  {
+   "fieldname": "max_attachment_mb",
+   "fieldtype": "Int",
+   "label": "Max File Size (MB)",
+   "default": "10"
+  },
+  {
+   "fieldname": "column_break_attachments",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "max_attachments",
+   "fieldtype": "Int",
+   "label": "Max Files per Message",
+   "default": "5"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Chat Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

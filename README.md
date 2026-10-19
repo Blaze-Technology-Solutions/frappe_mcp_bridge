@@ -4,6 +4,8 @@ Lets **Claude Code** and **Codex** (or any MCP client) work with a Frappe / ERPN
 
 It works with Frappe **v15 and v16**. The app ships switched **off** and **read only**, with only the `read` capability ticked.
 
+It also adds **[AI Chat](#ai-chat)**: a chat inside Desk that talks to Claude, ChatGPT, Gemini, DeepSeek or any OpenAI-compatible model with your company's API keys. It uses the same tools and rules as MCP, and keeps every message, token and cost for audit.
+
 ### How it connects
 
 There are two ways to connect. Both go through the same gate and write to the same log.
@@ -124,7 +126,7 @@ Every call must pass all of these checks:
 | Doctype allow/block lists | MCP Bridge Settings | `User`, `Role`, `DocPerm`, `Server Script`, `System Settings`, this app's own settings and other permission-carrying doctypes are **always** refused. |
 | Limits | MCP Bridge Settings | Rows per read, documents per write batch, calls per hour. |
 
-- **Dry run.** Every writing tool takes `dry_run`. The work really runs inside a savepoint and is rolled back, so the errors are the ones a live call would hit. **Default To Dry Run** makes that the default. `run_patch` is the exception: a patch commits as it goes, so its dry run only reports whether it would run and whether the module imports.
+- **Dry run.** Every writing tool takes `dry_run`. The work really runs inside a savepoint and is rolled back, so the errors are the ones a live call would hit. Anything it queued for after commit, such as Frappe's clean-up job after a delete, is discarded with it. Effects outside the database are not undone: a deleted document's attachment files are removed from disk, and on a developer-mode site saving a DocType, Report, Workspace or similar rewrites app files. **Default To Dry Run** makes that the default. `run_patch` is the exception: a patch commits as it goes, so its dry run only reports whether it would run and whether the module imports.
 - **Audit.** Every call, including refusals, is logged in **MCP Bridge Log**: tool, user, client, IP, duration, outcome and (optionally) payloads. Secrets in payloads are redacted. Old rows are cleared daily according to **Log Retention**.
 
 ### Sensitive fields
@@ -164,6 +166,55 @@ Tick **Allow Backups** to have Claude take a backup of the site on the server an
 - **It needs a worker.** The backup runs on the `long` queue. If it stays `queued`, no worker is running on the server.
 - **Encrypted and partial backups.** If the site encrypts its backups (System Settings), restore with `--encryption-key`; the key is not part of the download. A partial backup, from a `backup` entry in `site_config.json`, is restored with `bench partial-restore`.
 
+### AI Chat
+
+A chat page at `/app/ai-chat`, and an **Ask AI** button on every form, for the people you choose. Each provider is connected with an API key the company owns. Personal claude.ai or ChatGPT subscriptions cannot be used: the providers do not allow other apps to sign in with them.
+
+**Set up**
+
+1. Run `bench --site <site> migrate` and `bench build --app frappe_mcp_bridge`. The server needs the `anthropic` and `openai` Python packages (`bench setup requirements` installs them), a worker on the `default` queue, and socketio for live streaming.
+2. **AI Provider**: add one per account. Pick the type (Anthropic, OpenAI, Azure OpenAI, Google Gemini, DeepSeek, xAI, Mistral, Groq, OpenRouter, Ollama or any OpenAI-compatible server) and paste the API key. Press **Test Connection**, then **Fetch Models**.
+3. **AI Model**: enter each model's prices per million tokens and enable it. A model cannot be enabled without prices unless it is ticked **Free / Self-Hosted**. Use **Allowed Roles** to limit who can pick it.
+4. **AI Chat Settings**: tick **Enable AI Chat**, choose the default model, the currency to show costs in (with its rate to USD) and the budgets.
+5. Give people the **AI Chat User** role. Nobody without it sees the page, the workspace or the button.
+
+**Who can do what**
+
+| Role | Can |
+|---|---|
+| AI Chat User | Chat with the models their roles allow; see and archive their own chats and their own spend. |
+| AI Chat Manager | All of that, plus read (never change) everyone's chats, and see the **AI Chat Usage** report. |
+| System Manager | Set up providers, keys, models, prices, budgets and templates. Cannot read chats without the manager role. |
+| Administrator (the account) | The only one who can delete a chat. Deleting it removes its messages and approvals, which stay restorable from Deleted Documents. Its attached files are deleted for good. |
+
+**What the AI may do with your data**
+
+- **Off by default per model.** The AI sees ERP data only through models ticked **May Read ERP Data**, only when **ERP Data Access** allows it, and only when MCP Bridge Settings is enabled and the user holds one of its Allowed Roles. With ERP Data Access off, no tools, form context or attachments reach any model and the Ask AI button is hidden.
+- **Data stays with the models allowed it.** Once a chat holds company data (a tool result, the opened form, an attachment), it cannot switch or fall back to a model that may not read company data.
+- **Same rules as MCP, fewer tools.** Chat offers only document and report tools, from a fixed list in `chat/tools.py`. These run as the signed-in user with their own permissions, Read Only Mode, write windows, the doctype lists, sensitive-field masking and the IP list, and every call is written to MCP Bridge Log with client `AI Chat`. The log tools, `run_sql`, patches, admin actions, server scripts, server files and backups stay with MCP clients, because they read across users.
+- **Changes wait for the user.** Nothing is saved until the person chatting presses **Approve** on the card. Before that, a change runs as a dry run that is rolled back, together with anything it queued for after commit. Two kinds are previewed without running at all: deletes, which remove attachment files as they go, and, on developer-mode sites, records that Frappe writes to app files. Approvals expire after 30 minutes by default, and are checked again against the chat's settings when approved.
+- **Nothing to reach through.** Provider keys are stored encrypted and never sent to the browser. Every AI Chat doctype is on the MCP block list, so no tool can read keys or other people's chats. Model output is cleaned of HTML and of images from other sites before it is shown.
+- **Secrets are scrubbed.** API keys, tokens, passwords and card numbers typed into a message are removed before it is stored or sent. Attachments and form data are not scrubbed.
+
+**Billing**
+
+- **Each reply is billed as it happens.** Every reply stores its input, cached, cache-write, output and reasoning tokens, and its cost in USD and in your display currency. Both are frozen at that day's prices and rate.
+- **Users** see the cost under each reply, the chat's total, and their month against their budget.
+- **Managers** get the **AI Chat Usage** report (by user, model, provider, day or month) and the **AI Assistant** workspace with spend cards and charts.
+- **Budgets** are set per role or per user, as a monthly USD amount and a daily message count. At the limit the chat stops. The user and the alert recipients are emailed at 80% and 100%.
+
+**Extras**
+
+- **Ask AI** on any form sends that document, masked and read with the user's own permissions, along with the first message.
+- **Attachments**: images go to models that read images, PDFs natively where the model supports it and as text otherwise, CSV and text files as text.
+- **AI Prompt Template**: ready-made prompts with `{{ doc.fieldname }}` placeholders, by role, optionally shown under Ask AI on one doctype. Placeholders are filled in plainly; templates are not Jinja.
+- **Fallback Model**: tried when a provider fails or declines.
+- **Stop** ends a reply mid-stream, and the tokens already used are still billed.
+- **Continue in a new chat**: when a chat nears the model's context window, the chat offers a fresh one that starts with the end of the old transcript.
+- **Stable requests**: a chat's system prompt and tool list are fixed at its first reply and sent unchanged afterwards, as current Claude models require; each message carries the time it was sent instead. A tool switched off later stays listed but is refused when called.
+
+**Running it in production**: replies run on the `default` queue, so they need a worker. Text streams over socketio; without it the page checks for progress every few seconds instead.
+
 ### Tools
 
 - **Orientation**: `site_ping`, `site_capabilities`, `describe_site`, `list_doctypes`, `get_doctype_schema`, `list_reports`
@@ -190,6 +241,10 @@ Tick **Allow Backups** to have Claude take a backup of the site on the server an
 | `This download link is invalid or has expired` | The link's time is up, or the capability behind it was switched off. Run `export_apps` or `get_backup_links` again. |
 | `Not enough free disk space for a backup` | The server's disk cannot hold the backup plus the 1 GB margin. Free some space or leave out the files. |
 | A backup stays `queued` | No `long` queue worker is running on the server. |
+| AI Chat says "Thinking…" and never answers | No worker is running on the `default` queue. |
+| AI Chat answers without using the site's data | The model is not ticked **May Read ERP Data**, ERP Data Access is off, MCP access is off, or the user holds none of MCP's Allowed Roles. The chat shows which. |
+| `You have used your AI Chat budget for this month` | Raise the budget in **AI Chat Settings**, for the role or for that user. |
+| `Enter the input and output prices before enabling …` | Every enabled model needs prices so its usage can be billed. Tick **Free / Self-Hosted** for local models. |
 
 ### Development
 
@@ -199,7 +254,16 @@ Adding a tool takes three steps. The gate needs no change.
 2. Add its long description to `frappe_mcp_bridge/mcp/descriptions.py`.
 3. Add a thin wrapper in `mcp_server/src/frappe_mcp_bridge_client/tools/`.
 
-The native endpoint builds each tool's input schema from the handler's signature and type hints.
+The native endpoint builds each tool's input schema from the handler's signature and type hints. AI Chat offers a new tool only once it is added to `CHAT_READ_TOOLS` or `CHAT_WRITE_TOOLS` in `chat/tools.py`; do that only for tools that respect the caller's own permissions.
+
+**AI Chat code.** The server side is in `frappe_mcp_bridge/chat/`:
+- `providers/` holds one adapter for Claude and one for every OpenAI-compatible API;
+- `orchestrator.py` runs a reply;
+- `tools.py` covers tools and approvals;
+- `billing.py` covers costs and budgets;
+- `access.py` holds the permission rules.
+
+The page is a Vue bundle in `public/js/ai_chat/`. Rebuild it with `bench build --app frappe_mcp_bridge`; Frappe v16 needs Node 24 for that.
 
 **Tests.** The suite runs against both Frappe versions. The tests swap in an in-memory settings doc and suppress commits, so they leave nothing behind on the site.
 

@@ -1,0 +1,232 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "One chat. Only the Administrator can delete it; deleting it removes its messages too.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "user",
+  "model",
+  "status",
+  "column_break_main",
+  "last_activity",
+  "message_count",
+  "run_started_at",
+  "context_section",
+  "context_doctype",
+  "context_name",
+  "continued_from",
+  "carry_over",
+  "usage_section",
+  "input_tokens",
+  "cached_input_tokens",
+  "output_tokens",
+  "column_break_usage",
+  "cost_usd",
+  "cost_display",
+  "display_currency",
+  "setup_section",
+  "frozen_system",
+  "frozen_tools"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "read_only": 1,
+   "options": "User",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Link",
+   "label": "Model",
+   "read_only": 1,
+   "options": "AI Model",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "read_only": 1,
+   "options": "Active\nRunning\nArchived",
+   "default": "Active",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_activity",
+   "fieldtype": "Datetime",
+   "label": "Last Activity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message_count",
+   "fieldtype": "Int",
+   "label": "Messages",
+   "read_only": 1
+  },
+  {
+   "fieldname": "run_started_at",
+   "fieldtype": "Datetime",
+   "label": "Reply Started At",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "context_section",
+   "fieldtype": "Section Break",
+   "label": "Opened From",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "context_doctype",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "read_only": 1,
+   "options": "DocType"
+  },
+  {
+   "fieldname": "context_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Document",
+   "read_only": 1,
+   "options": "context_doctype"
+  },
+  {
+   "fieldname": "continued_from",
+   "fieldtype": "Link",
+   "label": "Continued From",
+   "options": "AI Chat Conversation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "carry_over",
+   "fieldtype": "Long Text",
+   "label": "Carried Over",
+   "read_only": 1,
+   "description": "The earlier chat's transcript, sent with the first message."
+  },
+  {
+   "fieldname": "usage_section",
+   "fieldtype": "Section Break",
+   "label": "Usage"
+  },
+  {
+   "fieldname": "input_tokens",
+   "fieldtype": "Int",
+   "label": "Input Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cached_input_tokens",
+   "fieldtype": "Int",
+   "label": "Cached Input Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "output_tokens",
+   "fieldtype": "Int",
+   "label": "Output Tokens",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_usage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cost_usd",
+   "fieldtype": "Float",
+   "label": "Cost (USD)",
+   "read_only": 1,
+   "precision": "6",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cost_display",
+   "fieldtype": "Float",
+   "label": "Cost (Display Currency)",
+   "read_only": 1,
+   "precision": "6"
+  },
+  {
+   "fieldname": "display_currency",
+   "fieldtype": "Data",
+   "label": "Display Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "setup_section",
+   "fieldtype": "Section Break",
+   "label": "Model Setup",
+   "collapsible": 1,
+   "description": "Fixed at the first reply and sent unchanged with every later one, as current models require."
+  },
+  {
+   "fieldname": "frozen_system",
+   "fieldtype": "Long Text",
+   "label": "System Prompt",
+   "read_only": 1
+  },
+  {
+   "fieldname": "frozen_tools",
+   "fieldtype": "Code",
+   "label": "Tool Definitions",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-19 12:40:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Chat Conversation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "AI Chat User",
+   "read": 1,
+   "if_owner": 1
+  },
+  {
+   "role": "AI Chat Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Administrator",
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

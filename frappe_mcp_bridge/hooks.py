@@ -26,7 +26,8 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/frappe_mcp_bridge/css/frappe_mcp_bridge.css"
-# app_include_js = "/assets/frappe_mcp_bridge/js/frappe_mcp_bridge.js"
+# The Ask AI button on forms. It stays hidden unless boot says this user may chat.
+app_include_js = "ask_ai.bundle.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/frappe_mcp_bridge/css/frappe_mcp_bridge.css"
@@ -136,13 +137,23 @@ after_install = "frappe_mcp_bridge.install.after_install"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+# Each user sees only their own chats; AI Chat Managers may read everyone's. Only the
+# Administrator may delete any of it.
+permission_query_conditions = {
+	"AI Chat Conversation": "frappe_mcp_bridge.chat.access.conversation_conditions",
+	"AI Chat Message": "frappe_mcp_bridge.chat.access.message_conditions",
+	"AI Chat Action": "frappe_mcp_bridge.chat.access.action_conditions",
+	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.budget_alert_conditions",
+}
+
+has_permission = {
+	"AI Chat Conversation": "frappe_mcp_bridge.chat.access.has_owned_permission",
+	"AI Chat Message": "frappe_mcp_bridge.chat.access.has_owned_permission",
+	"AI Chat Action": "frappe_mcp_bridge.chat.access.has_owned_permission",
+	"AI Chat Budget Alert": "frappe_mcp_bridge.chat.access.has_owned_permission",
+}
+
+boot_session = "frappe_mcp_bridge.chat.access.boot_session"
 
 # Document Events
 # ---------------
@@ -165,6 +176,9 @@ scheduler_events = {
 		# window ends; this ticks Read Only Mode back on so the form shows it too.
 		"*/5 * * * *": [
 			"frappe_mcp_bridge.frappe_mcp_bridge.doctype.mcp_bridge_settings.mcp_bridge_settings.close_expired_write_window",
+			# AI Chat: approvals nobody acted on, and chats whose reply job died.
+			"frappe_mcp_bridge.chat.tools.expire_pending_actions",
+			"frappe_mcp_bridge.chat.orchestrator.reset_stale_replies",
 		],
 	},
 	# export_apps zips outlive their one-hour download link by at most an hour.

@@ -1,0 +1,202 @@
+{
+ "app": "frappe_mcp_bridge",
+ "charts": [
+  {
+   "chart_name": "AI Chat Daily Spend",
+   "label": "AI Chat Daily Spend"
+  },
+  {
+   "chart_name": "AI Chat Spend by Model",
+   "label": "AI Chat Spend by Model"
+  }
+ ],
+ "content": "[{\"id\": \"aic_hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>AI Assistant</b></span>\", \"col\": 12}}, {\"id\": \"aic_para\", \"type\": \"paragraph\", \"data\": {\"text\": \"Chat with your company's AI models. Every message, token and cost is kept for audit.\", \"col\": 12}}, {\"id\": \"aic_sc_chat\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open AI Chat\", \"col\": 4}}, {\"id\": \"aic_sc_usage\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Usage Report\", \"col\": 4}}, {\"id\": \"aic_sc_chats\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"All Chats\", \"col\": 4}}, {\"id\": \"aic_nc_spend\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI Chat Spend This Month\", \"col\": 3}}, {\"id\": \"aic_nc_replies\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI Chat Replies Today\", \"col\": 3}}, {\"id\": \"aic_nc_chats\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI Chat Chats This Month\", \"col\": 3}}, {\"id\": \"aic_nc_users\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"AI Chat Active Users\", \"col\": 3}}, {\"id\": \"aic_ch_daily\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI Chat Daily Spend\", \"col\": 8}}, {\"id\": \"aic_ch_model\", \"type\": \"chart\", \"data\": {\"chart_name\": \"AI Chat Spend by Model\", \"col\": 4}}, {\"id\": \"aic_sp\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"aic_card_setup\", \"type\": \"card\", \"data\": {\"card_name\": \"Setup\", \"col\": 4}}, {\"id\": \"aic_card_audit\", \"type\": \"card\", \"data\": {\"card_name\": \"Audit\", \"col\": 4}}]",
+ "creation": "2026-10-18 00:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "message-square",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "AI Assistant",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Setup",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat Settings",
+   "link_count": 0,
+   "link_to": "AI Chat Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Provider",
+   "link_count": 0,
+   "link_to": "AI Provider",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Model",
+   "link_count": 0,
+   "link_to": "AI Model",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Prompt Template",
+   "link_count": 0,
+   "link_to": "AI Prompt Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Audit",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat Conversation",
+   "link_count": 0,
+   "link_to": "AI Chat Conversation",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat Message",
+   "link_count": 0,
+   "link_to": "AI Chat Message",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat Action",
+   "link_count": 0,
+   "link_to": "AI Chat Action",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "AI Chat Budget Alert",
+   "link_count": 0,
+   "link_to": "AI Chat Budget Alert",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "AI Chat Usage",
+   "link_count": 0,
+   "link_to": "AI Chat Usage",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-10-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Assistant",
+ "number_cards": [
+  {
+   "label": "AI Spend This Month (USD)",
+   "number_card_name": "AI Chat Spend This Month"
+  },
+  {
+   "label": "AI Replies Today",
+   "number_card_name": "AI Chat Replies Today"
+  },
+  {
+   "label": "Chats This Month",
+   "number_card_name": "AI Chat Chats This Month"
+  },
+  {
+   "label": "Chat Users This Month",
+   "number_card_name": "AI Chat Active Users"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "AI Chat User"
+  },
+  {
+   "role": "AI Chat Manager"
+  }
+ ],
+ "sequence_id": 22.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Open AI Chat",
+   "link_to": "ai-chat",
+   "type": "Page"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Usage Report",
+   "link_to": "AI Chat Usage",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "All Chats",
+   "link_to": "AI Chat Conversation",
+   "type": "DocType"
+  }
+ ],
+ "title": "AI Assistant",
+ "type": "Workspace"
+}

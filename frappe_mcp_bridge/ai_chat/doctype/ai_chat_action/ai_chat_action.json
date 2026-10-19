@@ -1,0 +1,210 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "AICA-.#####",
+ "creation": "2026-10-18 00:00:00.000000",
+ "description": "A change the AI proposed. It runs as a dry run first and is saved only once the user approves.",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "tool",
+  "status",
+  "user",
+  "conversation",
+  "message",
+  "tool_call_id",
+  "column_break_head",
+  "capability",
+  "reference_doctype",
+  "reference_name",
+  "expires_at",
+  "decided_by",
+  "decided_at",
+  "params_section",
+  "params",
+  "preview_section",
+  "preview",
+  "dry_run_log",
+  "result_section",
+  "result",
+  "result_log",
+  "error"
+ ],
+ "fields": [
+  {
+   "fieldname": "tool",
+   "fieldtype": "Data",
+   "label": "Tool",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "read_only": 1,
+   "options": "Pending\nApproved\nRejected\nExpired\nFailed",
+   "default": "Pending",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "read_only": 1,
+   "options": "User",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "conversation",
+   "fieldtype": "Link",
+   "label": "Conversation",
+   "read_only": 1,
+   "options": "AI Chat Conversation",
+   "search_index": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Link",
+   "label": "Requested In",
+   "read_only": 1,
+   "options": "AI Chat Message"
+  },
+  {
+   "fieldname": "tool_call_id",
+   "fieldtype": "Data",
+   "label": "Tool Call ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "capability",
+   "fieldtype": "Data",
+   "label": "Capability",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Data",
+   "label": "Reference DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Reference Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expires_at",
+   "fieldtype": "Datetime",
+   "label": "Expires At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "decided_by",
+   "fieldtype": "Link",
+   "label": "Decided By",
+   "read_only": 1,
+   "options": "User"
+  },
+  {
+   "fieldname": "decided_at",
+   "fieldtype": "Datetime",
+   "label": "Decided At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "params_section",
+   "fieldtype": "Section Break",
+   "label": "Parameters"
+  },
+  {
+   "fieldname": "params",
+   "fieldtype": "Code",
+   "label": "Parameters",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "preview_section",
+   "fieldtype": "Section Break",
+   "label": "Dry Run"
+  },
+  {
+   "fieldname": "preview",
+   "fieldtype": "Long Text",
+   "label": "Preview",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dry_run_log",
+   "fieldtype": "Data",
+   "label": "Dry Run Log",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Long Text",
+   "label": "Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result_log",
+   "fieldtype": "Data",
+   "label": "Result Log",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AI Chat",
+ "name": "AI Chat Action",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "AI Chat User",
+   "read": 1,
+   "if_owner": 1
+  },
+  {
+   "role": "AI Chat Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Administrator",
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "tool"
+}

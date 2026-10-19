@@ -49,6 +49,15 @@ ALWAYS_BLOCKED_DOCTYPES = {
 	"Webhook",
 	"Server Script",
 	"System Settings",
+	# AI Chat: provider keys, budgets, and every user's chats and bills.
+	"AI Chat Settings",
+	"AI Provider",
+	"AI Model",
+	"AI Prompt Template",
+	"AI Chat Conversation",
+	"AI Chat Message",
+	"AI Chat Action",
+	"AI Chat Budget Alert",
 }
 
 # The longest a single Allow Writes For window may run.

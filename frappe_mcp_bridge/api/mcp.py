@@ -214,11 +214,29 @@ def _run(definition, call_params: dict, is_dry_run: bool):
 
 	# Run the real thing, then throw the transaction away. Validations, links and
 	# naming all behave exactly as they would on a live call.
+	pending = _pending_callbacks()
 	frappe.db.savepoint(DRY_RUN_SAVEPOINT)
 	try:
 		return definition.handler(**call_params)
 	finally:
 		frappe.db.rollback(save_point=DRY_RUN_SAVEPOINT)
+		# Rolling back to a savepoint keeps whatever the handler queued for commit time,
+		# such as delete_doc's clean-up job, which would then run on the next commit.
+		_restore_callbacks(pending)
+
+
+CALLBACK_QUEUES = ("before_commit", "after_commit", "before_rollback", "after_rollback")
+
+
+def _pending_callbacks() -> dict:
+	return {name: list(getattr(frappe.db, name)._functions) for name in CALLBACK_QUEUES}
+
+
+def _restore_callbacks(pending: dict) -> None:
+	for name, functions in pending.items():
+		queue = getattr(frappe.db, name)._functions
+		queue.clear()
+		queue.extend(functions)
 
 
 def _failure(
