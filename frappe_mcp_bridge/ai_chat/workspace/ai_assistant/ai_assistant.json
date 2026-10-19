@@ -78,7 +78,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Audit",
-   "link_count": 5,
+   "link_count": 7,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -136,9 +136,31 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "AI Reply Ratings",
+   "link_count": 0,
+   "link_to": "AI Reply Ratings",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "AI Model Health",
+   "link_count": 0,
+   "link_to": "AI Model Health",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-19 00:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Chat",
  "name": "AI Assistant",

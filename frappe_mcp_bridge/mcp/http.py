@@ -133,10 +133,24 @@ def _call(method: str, params: dict, client: str):
 	if method in ("resources/list", "resources/templates/list"):
 		return {"resources": []} if method == "resources/list" else {"resourceTemplates": []}
 
-	if method == "prompts/list":
-		return {"prompts": []}
+	if method in ("prompts/list", "prompts/get"):
+		return _prompts(method, params)
 
 	raise RPCError(METHOD_NOT_FOUND, f"Method not found: {method}")
+
+
+def _prompts(method: str, params: dict) -> dict:
+	from frappe_mcp_bridge.mcp import prompts
+	from frappe_mcp_bridge.mcp.gate import MCPBlocked
+
+	try:
+		if method == "prompts/list":
+			return {"prompts": prompts.list_prompts()}
+		return prompts.get_prompt(str(params.get("name") or ""), params.get("arguments"))
+	except ValueError as error:
+		raise RPCError(INVALID_PARAMS, str(error))
+	except (MCPBlocked, frappe.PermissionError, frappe.DoesNotExistError) as error:
+		raise RPCError(INVALID_REQUEST, str(error) or "Not permitted.")
 
 
 def _initialize(params: dict) -> dict:
@@ -145,7 +159,7 @@ def _initialize(params: dict) -> dict:
 
 	return {
 		"protocolVersion": version,
-		"capabilities": {"tools": {"listChanged": False}},
+		"capabilities": {"tools": {"listChanged": False}, "prompts": {"listChanged": False}},
 		"serverInfo": {"name": "frappe-mcp-bridge", "title": "Frappe MCP Bridge", "version": __version__},
 		"instructions": INSTRUCTIONS,
 	}

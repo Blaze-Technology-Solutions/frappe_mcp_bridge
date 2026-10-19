@@ -1,0 +1,11 @@
+{
+	"name": "frappe-mcp-bridge-e2e",
+	"private": true,
+	"description": "Browser tests for AI Chat. See the Development section of the README.",
+	"scripts": {
+		"test": "playwright test"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.63.0"
+	}
+}

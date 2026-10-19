@@ -25,6 +25,16 @@ def register(mcp, bridge: Bridge) -> None:
 		)
 
 	@mcp.tool()
+	async def get_write_approval(approval: str) -> str:
+		"""See how a write that waited for approval in Desk ended.
+
+		When Approve Writes in Desk is on, a write tool answers with an approval ID instead of
+		making the change, and the person who asked approves or rejects it in Desk. status is
+		Pending, Approved (saved, with the result), Rejected, Expired or Failed (with the error).
+		"""
+		return render(await bridge.call("get_write_approval", {"approval": approval}))
+
+	@mcp.tool()
 	async def get_single(doctype: str) -> str:
 		"""Fetch a Single doctype, such as Manufacturing Settings or Stock Settings."""
 		return render(await bridge.call("get_single", {"doctype": doctype}))

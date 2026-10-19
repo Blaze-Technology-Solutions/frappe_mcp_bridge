@@ -51,6 +51,7 @@ MESSAGE_FIELDS = [
 	"raw_content",
 	"raw_provider",
 	"exclude_from_context",
+	"replaced",
 	"mcp_bridge_log",
 	"action",
 	"artifact",
@@ -443,8 +444,10 @@ def insert_message(conversation, values: dict):
 
 def add_notice(conversation, text: str, is_error: bool = False):
 	"""A line for the user only. Notices are never sent to the model."""
+	# The model goes on it too, so AI Model Health can count failures by model.
 	message = insert_message(
-		conversation, {"role": "Notice", "content": text, "is_error": 1 if is_error else 0}
+		conversation,
+		{"role": "Notice", "content": text, "is_error": 1 if is_error else 0, "model": conversation.model},
 	)
 	frappe.db.commit()
 	publish(conversation, {"type": "message", "message": message_for_ui(_row(message))})
@@ -498,10 +501,22 @@ def add_to_totals(conversation: str, message) -> None:
 	)
 
 
-def load_rows(conversation: str) -> list[dict]:
+def load_rows(conversation: str, last: int | None = None) -> list[dict]:
+	"""Every message in order, or only the last ones for the page to show first."""
+	if not last:
+		return frappe.get_all(
+			"AI Chat Message",
+			filters={"conversation": conversation},
+			fields=MESSAGE_FIELDS,
+			order_by="seq asc",
+		)
 	return frappe.get_all(
-		"AI Chat Message", filters={"conversation": conversation}, fields=MESSAGE_FIELDS, order_by="seq asc"
-	)
+		"AI Chat Message",
+		filters={"conversation": conversation},
+		fields=MESSAGE_FIELDS,
+		order_by="seq desc",
+		limit_page_length=last,
+	)[::-1]
 
 
 def _row(message) -> frappe._dict:
@@ -756,6 +771,7 @@ def message_for_ui(row) -> dict:
 		"tool_name": row.tool_name,
 		"is_error": bool(row.is_error),
 		"excluded": bool(row.exclude_from_context),
+		"replaced": bool(row.replaced),
 		"mcp_bridge_log": row.mcp_bridge_log,
 		"artifact": artifacts.for_ui(row.artifact) if row.artifact else None,
 		"model": row.model,
@@ -790,8 +806,12 @@ def message_for_ui(row) -> dict:
 				"reference_doctype",
 				"reference_name",
 				"params",
+				"rows",
+				"approved_params",
 			],
 			as_dict=True,
 		)
+		if data["action"]:
+			data["action"]["rows"] = json.loads(data["action"]["rows"]) if data["action"]["rows"] else []
 
 	return data

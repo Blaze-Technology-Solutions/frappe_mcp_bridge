@@ -45,6 +45,8 @@
   "masked_fields",
   "safety_section",
   "default_dry_run",
+  "writes_need_approval",
+  "write_approval_minutes",
   "max_rows",
   "column_break_safety",
   "max_write_batch",
@@ -296,6 +298,20 @@
    "label": "Default To Dry Run"
   },
   {
+   "fieldname": "writes_need_approval",
+   "fieldtype": "Check",
+   "label": "Approve Writes in Desk",
+   "default": "0",
+   "description": "A write from an MCP client is not made at once: it waits as an MCP Write Approval until the person who asked approves it in Desk. AI Chat has approvals of its own."
+  },
+  {
+   "fieldname": "write_approval_minutes",
+   "fieldtype": "Int",
+   "label": "Approval Expires After (Minutes)",
+   "default": "60",
+   "depends_on": "writes_need_approval"
+  },
+  {
    "default": "500",
    "description": "Ceiling on rows returned by a single read.",
    "fieldname": "max_rows",
@@ -362,7 +378,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-08 00:00:00.000000",
+ "modified": "2026-10-19 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe MCP Bridge",
  "name": "MCP Bridge Settings",

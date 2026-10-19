@@ -77,6 +77,13 @@ Read back the audit trail of MCP calls made against this site.
 
 status is one of Success, Failed or Blocked. Use include_payloads to see the
 arguments and responses that were stored.""",
+	"get_write_approval": """\
+See how a write that waited for approval in Desk ended.
+
+When Approve Writes in Desk is on, a write tool answers with an approval ID instead
+of making the change. The person who asked approves or rejects it in Desk. status
+is Pending, Approved (saved: true, with the result), Rejected, Expired or Failed
+(with the error). Only your own approvals can be read.""",
 	"get_error_logs": """\
 Read the site's Error Log, newest first. since takes "YYYY-MM-DD HH:MM:SS".""",
 	"create_document": """\

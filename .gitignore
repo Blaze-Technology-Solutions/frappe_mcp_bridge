@@ -57,3 +57,8 @@ jspm_packages/
 # stdio bridge local state
 mcp_server/.venv/
 mcp_server/.env
+
+# Browser tests (e2e/)
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/

@@ -25,6 +25,7 @@ class AIChatSettings(Document):
 		self.max_attachments = max(cint(self.max_attachments) or 5, 1)
 		self.default_monthly_budget = max(flt(self.default_monthly_budget), 0)
 		self.default_daily_messages = max(cint(self.default_daily_messages), 0)
+		self.max_messages_per_minute = max(cint(self.max_messages_per_minute), 0)
 
 	def validate_currency(self):
 		if not self.display_currency or self.display_currency == "USD":

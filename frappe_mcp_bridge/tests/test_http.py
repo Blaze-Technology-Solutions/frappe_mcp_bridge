@@ -7,6 +7,7 @@ import frappe
 
 from frappe_mcp_bridge.api import mcp as api
 from frappe_mcp_bridge.mcp import http
+from frappe_mcp_bridge.tests.chat_utils import ChatTestCase
 from frappe_mcp_bridge.tests.utils import IntegrationTestCase, as_user, mcp_settings, request
 
 
@@ -109,3 +110,66 @@ class TestServeEndpoint(IntegrationTestCase):
 			response = api.serve()
 
 		self.assertEqual(response.status_code, 405)
+
+
+class TestPrompts(ChatTestCase):
+	"""AI Prompt Templates as MCP prompts. Each test is rolled back, templates included."""
+
+	def template(self, title, prompt, document_type=None, roles=()):
+		from frappe_mcp_bridge.tests.chat_utils import make_role
+
+		return (
+			frappe.get_doc(
+				{
+					"doctype": "AI Prompt Template",
+					"title": title,
+					"prompt": prompt,
+					"enabled": 1,
+					"document_type": document_type,
+					"allowed_roles": [{"role": make_role(role)} for role in roles],
+				}
+			)
+			.insert(ignore_permissions=True)
+			.name
+		)
+
+	def test_templates_are_listed_and_filled_from_a_document(self):
+		from frappe_mcp_bridge.tests.chat_utils import make_user
+		from frappe_mcp_bridge.tests.utils import make_todo
+
+		plain = self.template("Weekly summary", "Summarise this week's sales.")
+		for_todo = self.template("Explain the task", "Explain this task: {{ doc.description }}", "ToDo")
+		self.template("Auditors only", "Audit it.", roles=["MCP Prompt Auditor"])
+		todo = make_todo("count the pallets")
+		user = make_user("mcp-prompts@example.com", "System Manager")
+
+		with mcp_settings(log_requests=1), as_user(user):
+			_status, initialized = http.handle(rpc("initialize", {"protocolVersion": "2025-06-18"}), "test")
+			_status, listed = http.handle(rpc("prompts/list"), "test")
+			_status, filled = http.handle(
+				rpc("prompts/get", {"name": for_todo, "arguments": {"document": todo}}), "test"
+			)
+			_status, simple = http.handle(rpc("prompts/get", {"name": plain}), "test")
+			_status, missing = http.handle(rpc("prompts/get", {"name": for_todo}), "test")
+			_status, hidden = http.handle(rpc("prompts/get", {"name": "Auditors only"}), "test")
+
+		self.assertIn("prompts", initialized["result"]["capabilities"])
+		prompts = {prompt["name"]: prompt for prompt in listed["result"]["prompts"]}
+		self.assertIn(plain, prompts)
+		self.assertNotIn("Auditors only", prompts)
+		self.assertEqual(prompts[for_todo]["arguments"][0]["name"], "document")
+		self.assertNotIn("arguments", prompts[plain])
+
+		text = filled["result"]["messages"][0]["content"]["text"]
+		self.assertEqual(text, "Explain this task: count the pallets")
+		self.assertEqual(simple["result"]["messages"][0]["content"]["text"], "Summarise this week's sales.")
+		self.assertEqual(missing["error"]["code"], http.INVALID_PARAMS)
+		self.assertEqual(hidden["error"]["code"], http.INVALID_PARAMS)
+		# Filling from a document is a read, and logged like one.
+		self.assertTrue(frappe.db.exists("MCP Bridge Log", {"tool": "prompts/get", "user": user}))
+
+	def test_prompts_follow_the_mcp_switch(self):
+		self.template("Weekly summary", "Summarise this week's sales.")
+		with mcp_settings(enabled=0):
+			_status, body = http.handle(rpc("prompts/list"), "test")
+		self.assertEqual(body["error"]["code"], http.INVALID_REQUEST)

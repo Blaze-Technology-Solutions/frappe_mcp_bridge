@@ -97,15 +97,22 @@ const note = computed(() => (current.value.erp_tools ? "" : current.value.erp_no
 
 async function send() {
 	if (!ready.value) return;
+	const message = { text: text.value.trim(), files: [...files.value] };
+	// Cleared at once, so whatever is typed while this one is on its way is kept.
+	text.value = "";
+	files.value = [];
+	nextTick(grow);
 	sending.value = true;
 	try {
-		// Awaited, so a refused message (over budget, say) stays in the box to retry.
-		await props.submit({ text: text.value.trim(), files: [...files.value] });
-		text.value = "";
-		files.value = [];
-		nextTick(grow);
+		await props.submit(message);
 	} catch (e) {
-		// frappe.call has already shown the server's reason.
+		// frappe.call has already shown the server's reason. A refused message (over budget,
+		// say) goes back in the box to retry, unless something new has been typed since.
+		if (!text.value.trim() && !files.value.length) {
+			text.value = message.text;
+			files.value = message.files;
+			nextTick(grow);
+		}
 	} finally {
 		sending.value = false;
 	}
